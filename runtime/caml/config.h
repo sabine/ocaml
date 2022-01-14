@@ -228,7 +228,7 @@ typedef uint64_t uintnat;
 /* Maximum size of the minor zone (words).
    Must be greater than or equal to [Minor_heap_min].
 */
-#define Minor_heap_max (1 << 28)
+#define Minor_heap_max_def (1 << 28)
 
 /* Default size of the minor zone. (words)  */
 #define Minor_heap_def 262144
@@ -245,7 +245,7 @@ typedef uint64_t uintnat;
 #define Percent_free_def 120
 
 /* Maximum number of domains */
-#define Max_domains 128
+#define Max_domains_def 128
 
 /* Default setting for the major GC slice smoothing window: 1
    (i.e. no smoothing)
