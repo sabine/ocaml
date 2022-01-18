@@ -584,6 +584,9 @@ CAMLexport void caml_reset_domain_lock(void)
 void caml_init_domains(uintnat minor_heap_wsz) {
   int i;
   uintnat size;
+  uintnat participating_size;
+  uintnat all_domains_size;
+  uintnat stw_domains_size;
   void* heaps_base;
 
   /* sanity check configuration */
@@ -601,9 +604,12 @@ void caml_init_domains(uintnat minor_heap_wsz) {
   caml_minor_heaps_base = (uintnat) heaps_base;
   caml_minor_heaps_end = (uintnat) heaps_base + size;
 
-  stw_request.participating = caml_mem_map(caml_params->max_domains * sizeof(caml_domain_state*), sizeof(caml_domain_state*), 0);
-  all_domains = caml_mem_map(caml_params->max_domains * sizeof(struct dom_internal), sizeof(dom_internal), 0);
-  stw_domains.domains = caml_mem_map(caml_params->max_domains * sizeof(struct dom_internal*), sizeof(dom_internal*), 0);
+  participating_size = caml_params->max_domains * sizeof(caml_domain_state*);
+  stw_request.participating = caml_mem_map(participating_size, participating_size, 0);
+  all_domains_size = caml_params->max_domains * sizeof(struct dom_internal);
+  all_domains = caml_mem_map(all_domains_size, all_domains_size, 0);
+  stw_domains_size = caml_params->max_domains * sizeof(struct dom_internal*);
+  stw_domains.domains = caml_mem_map(stw_domains_size, stw_domains_size, 0);
 
   for (i = 0; i < caml_params->max_domains; i++) {
     struct dom_internal* dom = &all_domains[i];
@@ -628,14 +634,7 @@ void caml_init_domains(uintnat minor_heap_wsz) {
     dom->backup_thread_msg = BT_INIT;
 
     domain_minor_heap_base = caml_minor_heaps_base +
-<<<<<<< HEAD
-      (uintnat)Bsize_wsize(Minor_heap_max) * (uintnat)i;
-=======
       (uintnat)Bsize_wsize(caml_params->minor_heap_max_wsz) * (uintnat)i;
-    domain_tls_base = caml_tls_areas_base + tls_size * (uintnat)i;
-    dom->tls_area = domain_tls_base;
-    dom->tls_area_end = domain_tls_base + tls_size;
->>>>>>> towards OCAMLRUNPARAM options for max domains and for minor heap size
     dom->minor_heap_area = domain_minor_heap_base;
     dom->minor_heap_area_end =
          domain_minor_heap_base + Bsize_wsize(caml_params->minor_heap_max_wsz);
@@ -1406,10 +1405,6 @@ static void domain_terminate (void)
       finished = 1;
       s->terminating = 0;
       s->running = 0;
-<<<<<<< HEAD
-=======
-      s->unique_id += caml_params->max_domains;
->>>>>>> towards OCAMLRUNPARAM options for max domains and for minor heap size
 
       /* Remove this domain from stw_domains */
       remove_from_stw_domains(domain_self);
