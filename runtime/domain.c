@@ -155,7 +155,8 @@ static struct {
   int num_domains;
   atomic_uintnat barrier;
 
-  caml_domain_state** participating; /* array of length caml_params->max_domains */
+  /* array of length caml_params->max_domains */
+  caml_domain_state** participating;
 } stw_request = {
   ATOMIC_UINTNAT_INIT(0),
   ATOMIC_UINTNAT_INIT(0),
@@ -172,7 +173,8 @@ static caml_plat_mutex all_domains_lock = CAML_PLAT_MUTEX_INITIALIZER;
 static caml_plat_cond all_domains_cond =
     CAML_PLAT_COND_INITIALIZER(&all_domains_lock);
 static atomic_uintnat /* dom_internal* */ stw_leader = 0;
-static struct dom_internal* all_domains; /* array of length caml_params->max_domains */
+/* array of length caml_params->max_domains */
+static struct dom_internal* all_domains;
 
 CAMLexport atomic_uintnat caml_num_domains_running;
 
@@ -595,7 +597,8 @@ void caml_init_domains(uintnat minor_heap_wsz) {
     caml_fatal_error("minor_heap_max misconfigured for this platform");
     
   /* reserve memory space for minor heaps */
-  size = (uintnat)Bsize_wsize(caml_params->minor_heap_max_wsz) * caml_params->max_domains;
+    size = (uintnat)Bsize_wsize(caml_params->minor_heap_max_wsz)
+    * caml_params->max_domains;
 
   heaps_base = caml_mem_map(size, size, 1 /* reserve_only */);
   if (heaps_base == NULL)
@@ -608,7 +611,8 @@ void caml_init_domains(uintnat minor_heap_wsz) {
      see https://github.com/ocaml-multicore/ocaml-multicore/issues/795#issuecomment-1015314683.
   */
   participating_size = caml_params->max_domains * sizeof(caml_domain_state*);
-  stw_request.participating = caml_stat_alloc_noexc(participating_size);  /* not freed */
+  stw_request.participating =
+    caml_stat_alloc_noexc(participating_size);  /* not freed */
   if (stw_request.participating == NULL) {
       caml_fatal_error("not enough memory to startup");
   }
@@ -618,7 +622,8 @@ void caml_init_domains(uintnat minor_heap_wsz) {
       caml_fatal_error("not enough memory to startup");
   }
   stw_domains_size = caml_params->max_domains * sizeof(struct dom_internal*);
-  stw_domains.domains = caml_stat_alloc_noexc(stw_domains_size);  /* not freed */
+  stw_domains.domains =
+    caml_stat_alloc_noexc(stw_domains_size);  /* not freed */
   if (stw_domains.domains == NULL) {
       caml_fatal_error("not enough memory to startup");
   }
@@ -931,7 +936,9 @@ CAMLprim value caml_domain_spawn(value callback, value mutex)
 #endif
 
   if (err) {
-    caml_failwith("failed to create domain thread. You can set the 'Max_domains' OCAMLRUNPARAM parameter to increase the domain limit.");
+    caml_failwith("failed to create domain thread. "
+      "You can set the 'Max_domains' OCAMLRUNPARAM parameter "
+      "to increase the domain limit.");
   }
 
   /* While waiting for the child thread to start up, we need to service any
