@@ -341,7 +341,7 @@ asize_t caml_norm_minor_heap_size (intnat wsize)
   if (wsize < Minor_heap_min) wsize = Minor_heap_min;
   bs = caml_mem_round_up_pages(Bsize_wsize (wsize));
 
-  max = Bsize_wsize(caml_params->minor_heap_max_wsz);
+  max = Bsize_wsize(Minor_heap_max);
 
   if (bs > max) bs = max;
 
@@ -592,12 +592,12 @@ void caml_init_domains(uintnat minor_heap_wsz) {
   void* heaps_base;
 
   /* sanity check configuration */
-  if (caml_mem_round_up_pages(Bsize_wsize(caml_params->minor_heap_max_wsz))
-          != Bsize_wsize(caml_params->minor_heap_max_wsz))
+  if (caml_mem_round_up_pages(Bsize_wsize(Minor_heap_max))
+          != Bsize_wsize(Minor_heap_max))
     caml_fatal_error("minor_heap_max misconfigured for this platform");
-    
+
   /* reserve memory space for minor heaps */
-    size = (uintnat)Bsize_wsize(caml_params->minor_heap_max_wsz)
+  size = (uintnat)Bsize_wsize(Minor_heap_max)
     * caml_params->max_domains;
 
   heaps_base = caml_mem_map(size, size, 1 /* reserve_only */);
@@ -651,10 +651,10 @@ void caml_init_domains(uintnat minor_heap_wsz) {
     dom->backup_thread_msg = BT_INIT;
 
     domain_minor_heap_base = caml_minor_heaps_base +
-      (uintnat)Bsize_wsize(caml_params->minor_heap_max_wsz) * (uintnat)i;
+      (uintnat)Bsize_wsize(Minor_heap_max) * (uintnat)i;
     dom->minor_heap_area = domain_minor_heap_base;
     dom->minor_heap_area_end =
-         domain_minor_heap_base + Bsize_wsize(caml_params->minor_heap_max_wsz);
+         domain_minor_heap_base + Bsize_wsize(Minor_heap_max);
   }
 
   create_domain(minor_heap_wsz);
@@ -962,9 +962,7 @@ CAMLprim value caml_domain_spawn(value callback, value mutex)
     /* failed */
     pthread_join(th, 0);
     free_domain_ml_values(p.ml_values);
-    caml_failwith("failed to allocate domain. "
-      "You can set the 'Max_domains' OCAMLRUNPARAM parameter "
-      "to increase the domain limit.");
+    caml_failwith("failed to allocate domain");
   }
   /* When domain 0 first spawns a domain, the backup thread is not active, we
      ensure it is started here. */

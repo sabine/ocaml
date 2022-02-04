@@ -25,7 +25,9 @@ void realloc_generic_table (struct generic_table *tbl, asize_t element_size,
 Caml_inline void *generic_table_get (struct generic_table *tbl,
                                       asize_t index, asize_t element_size)
 {
-  if (index > tbl->size ) caml_fatal_error ("generic table - index out of bounds");
+  if (index > tbl->size ) {
+    caml_fatal_error ("generic table - index out of bounds");
+  }
   return tbl->base + index * element_size;
 }
 

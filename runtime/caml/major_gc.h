@@ -86,11 +86,11 @@ struct gc_stats {
   struct heap_stats major_heap;
 };
 struct sampled_gc_stats_table CAML_TABLE_STRUCT(struct gc_stats);
-struct sampled_gc_stats_table caml_sampled_gc_stats;
-Caml_inline struct gc_stats *get_sampled_gc_stats (asize_t index)
+extern struct sampled_gc_stats_table caml_sampled_gc_stats;
+Caml_inline struct gc_stats* get_sampled_gc_stats (asize_t index)
 {
-  return generic_table_get((struct generic_table *) &caml_sampled_gc_stats,
-                                index, sizeof (struct gc_stats));
+  return generic_table_get((struct generic_table*) &caml_sampled_gc_stats,
+                            index, sizeof (struct gc_stats));
 }
 
 void caml_sample_gc_stats(struct gc_stats* buf);
