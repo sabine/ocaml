@@ -72,13 +72,9 @@ afl-fuzz -m none -i input -o output ./readline
 \end{verbatim}
 By inspecting instrumentation output, the fuzzer finds the crashing input quickly.
 
-Note: To fuzz-test an OCaml program with afl-fuzz, either
-\begin{itemize}
-\item the virtual memory reserved by the OCaml program must not exceed afl-fuzz's
-default 50MB virtual memory limit (this can be done by setting the maximum
-number of domains ("max_domains") and minor heap size ("minor_heap_size")
-")
-by setting them explicitly through OCAMLRUNPARAM options "d" and "s"), or
-\item afl-fuzz needs to be passed the option {\tt -m none} to disable afl-fuzz's
-default 50MB virtual memory limit.
-\end{itemize}
+Note: To fuzz-test an OCaml program with afl-fuzz, either \begin{itemize} \item
+the virtual memory reserved by the OCaml program must not exceed afl-fuzz's
+default 50MB virtual memory limit (this can be achieved by setting OCAMLRUNPARAM
+options max_domains ("d") and minor_heap_size ("s") to sufficiently low values),
+or \item afl-fuzz needs to be passed the option {\tt -m none} to disable
+afl-fuzz's default 50MB virtual memory limit. \end{itemize}
