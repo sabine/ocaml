@@ -18,6 +18,8 @@
 
 #ifdef CAML_INTERNALS
 
+#include "generic_table.h"
+
 typedef enum {
   Phase_sweep_and_mark_main,
   Phase_mark_final,
@@ -83,6 +85,14 @@ struct gc_stats {
   uint64_t forced_major_collections;
   struct heap_stats major_heap;
 };
+struct sampled_gc_stats_table CAML_TABLE_STRUCT(struct gc_stats);
+struct sampled_gc_stats_table caml_sampled_gc_stats;
+Caml_inline struct gc_stats *get_sampled_gc_stats (asize_t index)
+{
+  return generic_table_get((struct generic_table *) &caml_sampled_gc_stats,
+                                index, sizeof (struct gc_stats));
+}
+
 void caml_sample_gc_stats(struct gc_stats* buf);
 void caml_sample_gc_collect(caml_domain_state *domain);
 

@@ -41,14 +41,13 @@
 #include "caml/weak.h"
 
 extern value caml_ephe_none; /* See weak.c */
-struct generic_table CAML_TABLE_STRUCT(char);
 
 static atomic_intnat domains_finished_minor_gc;
 
 static atomic_uintnat caml_minor_cycles_started = 0;
 
 /* [sz] and [rsv] are numbers of entries */
-static void alloc_generic_table (struct generic_table *tbl, asize_t sz,
+void alloc_generic_table (struct generic_table *tbl, asize_t sz,
                                  asize_t rsv, asize_t element_size)
 {
   void *new_table;
@@ -803,7 +802,7 @@ CAMLexport value caml_check_urgent_gc (value extra_root)
   return extra_root;
 }
 
-static void realloc_generic_table
+void realloc_generic_table
 (struct generic_table *tbl, asize_t element_size,
  ev_gc_counter ev_counter_name,
  char *msg_threshold, char *msg_growing, char *msg_error)

@@ -48,7 +48,7 @@ extern uintnat caml_allocation_policy;    /*        see freelist.c */
 extern uintnat caml_custom_major_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_max_bsz; /* see custom.c */
-extern struct gc_stats *caml_sampled_gc_stats; /* see major_gc.c */
+extern struct sampled_gc_stats_table caml_sampled_gc_stats; /* see major_gc.c */
 
 CAMLprim value caml_gc_quick_stat(value v)
 {
@@ -285,11 +285,11 @@ CAMLprim value caml_get_minor_free (value v)
 
 void caml_init_gc (void)
 {
-  caml_sampled_gc_stats =
-    caml_stat_alloc_noexc(caml_params->max_domains * sizeof(struct gc_stats));
-  if (caml_sampled_gc_stats == NULL) {
-    caml_fatal_error("not enough memory to startup");
-  }
+  alloc_generic_table ((struct generic_table *) &caml_sampled_gc_stats,
+                       caml_params->max_domains,
+                       caml_params->max_domains,
+                       sizeof (struct gc_stats));
+
   caml_max_stack_size = caml_params->init_max_stack_wsz;
   caml_fiber_wsz = (Stack_threshold * 2) / sizeof(value);
   caml_percent_free = norm_pfree (caml_params->init_percent_free);
