@@ -19,6 +19,7 @@
 #include "misc.h"
 #include "config.h"
 #include "generic_table.h"
+#include "domain.h"
 
 #define caml_young_end Caml_state->young_end
 #define caml_young_ptr Caml_state->young_ptr

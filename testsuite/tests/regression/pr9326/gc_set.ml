@@ -1,6 +1,8 @@
 (* TEST
-   ocamlrunparam += ",N=512k"
+   ocamlrunparam += ",s=512k"
 *)
+
+(* TODO: remove ocamlrunparam, as this should be working without that*)
 
 open Gc
 
@@ -10,6 +12,7 @@ let stack_limit = 4194304 (* 4M *)
 let custom_major_ratio = 40
 let custom_minor_ratio = 99
 let custom_minor_max_size = 4096
+let max_domains = 64
 
 let _ =
   let g1 = Gc.get() in
@@ -25,7 +28,8 @@ let _ =
            window_size = g1.window_size;
            custom_major_ratio = custom_major_ratio;
            custom_minor_ratio = custom_minor_ratio;
-           custom_minor_max_size = custom_minor_max_size };
+           custom_minor_max_size = custom_minor_max_size;
+           max_domains = max_domains; };
   let g2 = Gc.get() in
   assert (g2.minor_heap_size = min_heap_sz);
   assert (g2.space_overhead = space_overhead);
@@ -36,4 +40,5 @@ let _ =
   assert (g2.window_size = g1.window_size);
   assert (g2.custom_major_ratio = custom_major_ratio);
   assert (g2.custom_minor_ratio = custom_minor_ratio);
-  assert (g2.custom_minor_max_size = custom_minor_max_size)
+  assert (g2.custom_minor_max_size = custom_minor_max_size);
+  assert (g2.max_domains = max_domains)

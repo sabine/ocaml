@@ -103,27 +103,33 @@ struct caml_thread_table {
   st_thread_id tick_thread_id;
 };
 
-/* thread_table instance, up to caml_params->max_domains */
-static struct caml_thread_table* thread_table;
+/* thread_table instance, up to caml_max_domains */
+struct thread_table CAML_TABLE_STRUCT(struct caml_thread_table);
+static struct thread_table thread_table;
+Caml_inline struct caml_thread_table* get_thread_table (asize_t index)
+{
+  return generic_table_get((struct generic_table*) &thread_table,
+                            index, sizeof (struct caml_thread_table));
+}
 
 /* the "head" of the circular list of thread descriptors for this domain */
-#define All_threads thread_table[Caml_state->id].all_threads
+#define All_threads get_thread_table(Caml_state->id)->all_threads
 
 /* The descriptor for the currently executing thread for this domain */
-#define Current_thread thread_table[Caml_state->id].current_thread
+#define Current_thread get_thread_table(Caml_state->id)->current_thread
 
 /* The master lock protecting this domain's thread chaining */
-#define Thread_main_lock thread_table[Caml_state->id].thread_lock
+#define Thread_main_lock get_thread_table(Caml_state->id)->thread_lock
 
 /* Whether the "tick" thread is already running for this domain */
-#define Tick_thread_running thread_table[Caml_state->id].tick_thread_running
+#define Tick_thread_running get_thread_table(Caml_state->id)->tick_thread_running
 
 /* The thread identifier of the "tick" thread for this domain */
-#define Tick_thread_id thread_table[Caml_state->id].tick_thread_id
+#define Tick_thread_id get_thread_table(Caml_state->id)->tick_thread_id
 
 /* The key used for storing the thread descriptor in the specific data
    of the corresponding system thread. */
-#define Thread_key thread_table[Caml_state->id].thread_key
+#define Thread_key get_thread_table(Caml_state->id)->thread_key
 
 /* Identifier for next thread creation */
 static atomic_uintnat thread_next_id = 0;
@@ -337,7 +343,7 @@ static void caml_thread_reinitialize(void)
 
 CAMLprim value caml_thread_join(value th);
 
-/* This hook is run when a domain shuts down (see domains.c).
+/* This hook is run when a domain shuts down (see domain.c).
 
    When a domain shuts down, the state must be cleared to allow proper reuse of
    the domain slot the next time a domain is started on this slot. If a program
@@ -370,16 +376,13 @@ CAMLprim value caml_thread_initialize_domain(value v)
   caml_thread_t new_thread;
 
   /* OS-specific initialization */
-  st_initialize(caml_params->max_domains);
+  st_initialize(caml_max_domains);
 
-  if (thread_table == NULL) {
-    /* not freed */
-    thread_table = caml_stat_alloc_noexc(
-      caml_params->max_domains * sizeof(struct caml_thread_table)
-    );
-    if (thread_table == NULL) {
-      caml_fatal_error("not enough memory to startup");
-    }
+  if (thread_table.base == NULL) {
+    alloc_generic_table ((struct generic_table *) &thread_table,
+                       caml_max_domains,
+                       caml_max_domains,
+                       sizeof (struct caml_thread_table));
   }
 
   st_masterlock_init(&Thread_main_lock);

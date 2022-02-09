@@ -230,6 +230,12 @@ type control =
         [caml_alloc_custom_mem] (e.g. bigarrays).
         Default: 8192 bytes.
         @since 4.08.0 *)
+
+    max_domains : int;
+    (** Maximum number of domains which can be created before the runtime needs
+      to allocate more memory to store domain state.
+      Default: 128.
+      @since TODO *)
   }
 (** The GC parameters are given as a [control] record.  Note that
     these parameters can also be initialised by setting the

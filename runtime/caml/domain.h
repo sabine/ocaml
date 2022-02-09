@@ -28,6 +28,8 @@ extern "C" {
 #include "domain_state.h"
 #include "platform.h"
 
+extern uintnat caml_max_domains;
+
 #define Caml_check_gc_interrupt(dom_st)   \
   (CAMLalloc_point_here, \
    CAMLunlikely( \

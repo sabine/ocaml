@@ -48,6 +48,7 @@ extern uintnat caml_allocation_policy;    /*        see freelist.c */
 extern uintnat caml_custom_major_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_max_bsz; /* see custom.c */
+extern uintnat caml_max_domains;          /* see domain.c */
 extern struct sampled_gc_stats_table caml_sampled_gc_stats; /* see major_gc.c */
 
 CAMLprim value caml_gc_quick_stat(value v)
@@ -126,7 +127,7 @@ CAMLprim value caml_gc_get(value v)
   CAMLparam0 ();   /* v is ignored */
   CAMLlocal1 (res);
 
-  res = caml_alloc_tuple (11);
+  res = caml_alloc_tuple (12);
   Store_field (res, 0, Val_long (Caml_state->minor_heap_wsz));  /* s */
   Store_field (res, 2, Val_long (caml_percent_free));           /* o */
   Store_field (res, 3, Val_long (caml_params->verb_gc));        /* v */
@@ -134,6 +135,7 @@ CAMLprim value caml_gc_get(value v)
   Store_field (res, 8, Val_long (caml_custom_major_ratio));     /* M */
   Store_field (res, 9, Val_long (caml_custom_minor_ratio));     /* m */
   Store_field (res, 10, Val_long (caml_custom_minor_max_bsz));  /* n */
+  Store_field (res, 11, Val_long (caml_max_domains));  /* n */
   CAMLreturn (res);
 }
 
@@ -159,6 +161,7 @@ CAMLprim value caml_gc_set(value v)
   uintnat newpf;
   uintnat newminwsz;
   uintnat new_custom_maj, new_custom_min, new_custom_sz;
+  uintnat new_max_domains;
   CAML_EV_BEGIN(EV_EXPLICIT_GC_SET);
 
   caml_change_max_stack_size (Long_val (Field (v, 5)));
@@ -203,6 +206,13 @@ CAMLprim value caml_gc_set(value v)
                      ARCH_SIZET_PRINTF_FORMAT "uk words\n", newminwsz / 1024);
     caml_set_minor_heap_size (newminwsz);
   }
+  new_max_domains = Long_val (Field (v, 11));
+  if (new_max_domains != caml_max_domains) {
+    caml_max_domains = new_max_domains;
+    // TODO: reallocate all the things that depends on caml_max_domains
+    // accordingly
+  }
+
   CAML_EV_END(EV_EXPLICIT_GC_SET);
 
   return Val_unit;
@@ -286,8 +296,8 @@ CAMLprim value caml_get_minor_free (value v)
 void caml_init_gc (void)
 {
   alloc_generic_table ((struct generic_table *) &caml_sampled_gc_stats,
-                       caml_params->max_domains,
-                       caml_params->max_domains,
+                       caml_max_domains,
+                       caml_max_domains,
                        sizeof (struct gc_stats));
 
   caml_max_stack_size = caml_params->init_max_stack_wsz;

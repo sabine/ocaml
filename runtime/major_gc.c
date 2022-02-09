@@ -37,6 +37,8 @@
 #include "caml/weak.h"
 #include "caml/skiplist.h"
 
+extern uintnat caml_max_domains;          /* see domain.c */
+
 /* NB the MARK_STACK_INIT_SIZE must be larger than the number of objects
    that can be in a pool, see POOL_WSIZE */
 #define MARK_STACK_INIT_SIZE (1 << 12)
@@ -941,7 +943,7 @@ void caml_sample_gc_stats(struct gc_stats* buf)
   int my_id = Caml_state->id;
   memset(buf, 0, sizeof(*buf));
 
-  for (i=0; i<caml_params->max_domains; i++) {
+  for (i=0; i<caml_max_domains; i++) {
     struct gc_stats* s = get_sampled_gc_stats(i);
     struct heap_stats* h = &s->major_heap;
     if (i != my_id) {

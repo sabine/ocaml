@@ -234,7 +234,7 @@ typedef uint64_t uintnat;
    something that remembers the amount of space allocated
    for a particular domain's minor heap
 */
-#define Minor_heap_max Minor_heap_def
+#define Minor_heap_max 524288
 
 
 /* Minimum size increment when growing the heap (words).
