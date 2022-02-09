@@ -32,8 +32,6 @@ struct generic_table CAML_TABLE_STRUCT(char);
 
 void alloc_generic_table (struct generic_table *tbl, asize_t sz,
                                  asize_t rsv, asize_t element_size);
-void realloc_generic_table (struct generic_table *tbl, asize_t element_size,
- char * msg_intr_int, char *msg_threshold, char *msg_growing, char *msg_error);
 // TODO: turn into C macro that takes the type?
 Caml_inline void *generic_table_get (struct generic_table *tbl,
                                       asize_t index, asize_t element_size)

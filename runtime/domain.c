@@ -638,9 +638,6 @@ CAMLexport void caml_reset_domain_lock(void)
 void caml_init_domains() {
   int i;
   uintnat size;
-  uintnat participating_size;
-  uintnat all_domains_size;
-  uintnat stw_domains_size;
   void* heaps_base;
 
   /* sanity check configuration */
