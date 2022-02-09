@@ -381,7 +381,7 @@ CAMLprim value caml_thread_initialize_domain(value v)
   if (thread_table.base == NULL) {
     alloc_generic_table ((struct generic_table *) &thread_table,
                        caml_max_domains,
-                       caml_max_domains,
+                       0,
                        sizeof (struct caml_thread_table));
   }
 

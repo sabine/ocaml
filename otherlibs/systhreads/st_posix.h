@@ -32,22 +32,25 @@
 
 typedef int st_retcode;
 
-/* Variables used to stop "tick" threads, array of length
-caml_max_domains */
-static atomic_uintnat* tick_thread_stop;
-#define Tick_thread_stop tick_thread_stop[Caml_state->id]
+/* Variables used to stop "tick" threads, length caml_max_domains */
+struct tick_thread_stop_table CAML_TABLE_STRUCT(atomic_uintnat);
+static struct tick_thread_stop_table tick_thread_stop;
+Caml_inline atomic_uintnat* get_tick_thread_stop (asize_t index)
+{
+  return generic_table_get((struct generic_table*) &tick_thread_stop,
+                            index, sizeof (atomic_uintnat));
+}
+#define Tick_thread_stop (*get_tick_thread_stop(Caml_state->id))
 
 /* OS-specific initialization */
 
 static int st_initialize(uintnat max_domains)
 {
-  if (tick_thread_stop == NULL) {
-    /* not freed */
-    tick_thread_stop =
-      caml_stat_alloc_noexc(max_domains * sizeof(atomic_uintnat));
-    if (tick_thread_stop == NULL) {
-      caml_fatal_error("not enough memory to startup");
-    }
+  if (tick_thread_stop.base == NULL) {
+    alloc_generic_table ((struct generic_table *) &tick_thread_stop,
+                       max_domains,
+                       0,
+                       sizeof (atomic_uintnat));
   }
   atomic_store_rel(&Tick_thread_stop, 0);
   return 0;

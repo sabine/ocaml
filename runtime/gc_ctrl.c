@@ -297,7 +297,7 @@ void caml_init_gc (void)
 {
   alloc_generic_table ((struct generic_table *) &caml_sampled_gc_stats,
                        caml_max_domains,
-                       caml_max_domains,
+                       0,
                        sizeof (struct gc_stats));
 
   caml_max_stack_size = caml_params->init_max_stack_wsz;

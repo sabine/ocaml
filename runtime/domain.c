@@ -47,6 +47,14 @@
 
 
 uintnat caml_max_domains = Max_domains_def;
+/* size of the virtual memory reservation for the minor heap, per domain. I.e.
+the amount of memory reserved for all minor heaps of all domains is
+caml_max_domains * caml_minor_heap_max_wsz. Individual domains can allocate
+smaller minor heaps, but when a domain calls Gc.set to allocate a bigger minor
+heap than this reservation, we stop the world and do a minor collection on all
+domains to decommit and perform a new virtual memory reservation based on the
+increased minor heap size. */
+uintnat caml_minor_heap_max_wsz = Minor_heap_def;
 
 /* From a runtime perspective, domains must handle stop-the-world (STW)
    sections, during which:
@@ -372,7 +380,7 @@ asize_t caml_norm_minor_heap_size (intnat wsize)
   if (wsize < Minor_heap_min) wsize = Minor_heap_min;
   bs = caml_mem_round_up_pages(Bsize_wsize (wsize));
 
-  max = Bsize_wsize(Minor_heap_max);
+  max = Bsize_wsize(caml_minor_heap_max_wsz);
 
   if (bs > max) bs = max;
 
@@ -623,14 +631,12 @@ void caml_init_domains(uintnat minor_heap_wsz) {
   void* heaps_base;
 
   /* sanity check configuration */
-  if (caml_mem_round_up_pages(Bsize_wsize(Minor_heap_max))
-          != Bsize_wsize(Minor_heap_max))
+  if (caml_mem_round_up_pages(Bsize_wsize(caml_minor_heap_max_wsz))
+          != Bsize_wsize(caml_minor_heap_max_wsz))
     caml_fatal_error("minor_heap_max misconfigured for this platform");
 
   /* reserve memory space for minor heaps */
-  // TODO: change so it doesn't allocate Minor_heap_max
-  size = (uintnat)Bsize_wsize(Minor_heap_max)
-    * caml_max_domains;
+  size = (uintnat)Bsize_wsize(caml_minor_heap_max_wsz) * caml_max_domains;
 
   heaps_base = caml_mem_map(size, size, 1 /* reserve_only */);
   if (heaps_base == NULL)
@@ -642,20 +648,20 @@ void caml_init_domains(uintnat minor_heap_wsz) {
   if (stw_request.participating.base == NULL) {
     alloc_generic_table ((struct generic_table *) &stw_request.participating,
                        caml_max_domains,
-                       caml_max_domains,
+                       0,
                        sizeof (struct caml_domain_state*));
   }
   
   if (all_domains.base == NULL) {
     alloc_generic_table ((struct generic_table *) &all_domains,
                        caml_max_domains,
-                       caml_max_domains,
+                       0,
                        sizeof (struct dom_internal));
   }
   if (stw_domains.domains.base == NULL) {
     alloc_generic_table ((struct generic_table *) &stw_domains.domains,
                        caml_max_domains,
-                       caml_max_domains,
+                       0,
                        sizeof (struct dom_internal*));
   }
 
@@ -682,10 +688,10 @@ void caml_init_domains(uintnat minor_heap_wsz) {
     dom->backup_thread_msg = BT_INIT;
 
     domain_minor_heap_base = caml_minor_heaps_base +
-      (uintnat)Bsize_wsize(Minor_heap_max) * (uintnat)i;
+      (uintnat)Bsize_wsize(caml_minor_heap_max_wsz) * (uintnat)i;
     dom->minor_heap_area = domain_minor_heap_base;
     dom->minor_heap_area_end =
-         domain_minor_heap_base + Bsize_wsize(Minor_heap_max);
+         domain_minor_heap_base + Bsize_wsize(caml_minor_heap_max_wsz);
   }
 
   create_domain(minor_heap_wsz);

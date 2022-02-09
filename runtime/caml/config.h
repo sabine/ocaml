@@ -228,15 +228,6 @@ typedef uint64_t uintnat;
 /* Default size of the minor zone. (words)  */
 #define Minor_heap_def 262144
 
-/* Maximum size of the minor zone (words).
-   Must be greater than or equal to [Minor_heap_min].
-   TODO: this will disappear altogether and could be replaced with
-   something that remembers the amount of space allocated
-   for a particular domain's minor heap
-*/
-#define Minor_heap_max 524288
-
-
 /* Minimum size increment when growing the heap (words).
    Must be a multiple of [Page_size / sizeof (value)]. */
 #define Heap_chunk_min (15 * Page_size)
