@@ -650,6 +650,78 @@ CAMLexport void caml_reset_domain_lock(void)
   return;
 }
 
+/* per-domain tables */
+
+/* Per-domain tables */
+struct per_domain_table_list {
+  struct per_domain_table_list * next;
+  const struct per_domain_table * table;
+  const asize_t element_size;
+  const string * name;
+};
+static struct per_domain_table_list * per_domain_table_list = NULL;
+
+/* precondition: the table [table] is not already in the per-domain table list.
+   we assume [name] is a static string, and will not deallocate it.
+ */
+void caml_register_per_domain_table(const struct generic_table * table, asize_t element_size, char * name)
+{
+  struct per_domain_table_list * l =
+    caml_stat_alloc(sizeof(struct per_domain_table_list));
+
+  // FIXME: consider growing the table here if it fails
+  CAMLassert(table->size >= caml_max_domains);
+
+  l->table = table;
+  l->next = per_domain_table_list;
+  l->element_size = element_size;
+  l->name = name;
+  per_domain_table_list = l;
+  #ifdef DEBUG
+  // check that [table] does not occur in the rest of the list.
+  for (l = per_domain_table_list->next; l != NULL; l = l->next) {
+    CAMLassert(l != table);
+  }
+  #endif
+}
+
+/* precondition: the table [to_remove] belongs to the per-domain table list. */
+void caml_remove_per_domain_table(const struct generic_table *to_remove)
+{
+  struct per_domain_table_list * l = per_domain_table_list;
+  if (l == to_remove) {
+    per_domain_table_list = l->next;
+  }
+  for (; l != NULL; l = l->next) {
+    if (l->next == to_remove) {
+      l->next = l->next->next;
+      return;
+    }
+  }
+  CAMLassert(0); // check that [to_remove] in fact occurred in the list.
+  return;
+}
+
+static void grow_per_domain_table(const struct generic_table *table, asize_t element_size, int capacity)
+{
+  // FIXME ideally we would need to use the name here
+  realloc_generic_table
+    ((struct generic_table *) tbl, sizeof (struct caml_custom_elt),
+     EC_C_REQUEST_GROW_PER_DOMAIN_TABLE,
+     "per-domain table threshold crossed\n",
+     "Growing per-domain table to %" ARCH_INTNAT_PRINTF_FORMAT "dk bytes\n",
+     "per-domain table overflow");
+}
+
+void caml_grow_per_domain_tables(int capacity) {
+  struct per_domain_table_list * l = per_domain_table_list;
+  for (; l != NULL; l = l->next) {
+    grow_per_domain_table(l->per_domain_table, l->element_size, capacity);
+  }
+}
+
+/* minor heap initialization and resizing */
+
 uintnat get_minor_heap_reservation_size() {
   /* sanity check configuration */
   if (caml_mem_round_up_pages(Bsize_wsize(caml_minor_heap_max_wsz))

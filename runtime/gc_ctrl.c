@@ -322,6 +322,9 @@ void caml_init_gc (void)
                        caml_max_domains,
                        0,
                        sizeof (struct gc_stats));
+  caml_register_per_domain_table(&caml_sampled_gc_stats,
+                                 sizeof (struct gc_stats),
+                                 "sampled_gc_stats");
 
   caml_max_stack_size = caml_params->init_max_stack_wsz;
   caml_fiber_wsz = (Stack_threshold * 2) / sizeof(value);

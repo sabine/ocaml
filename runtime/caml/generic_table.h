@@ -17,6 +17,7 @@
 #define CAML_GENERIC_TABLE_H
 
 #include "misc.h"
+#include "eventlog.h"
 
 #define CAML_TABLE_STRUCT(t) { \
   t *base;                     \
@@ -34,7 +35,8 @@ void alloc_generic_table (struct generic_table *tbl, asize_t sz,
                                  asize_t rsv, asize_t element_size);
 
 void realloc_generic_table (struct generic_table *tbl, asize_t element_size,
- char * msg_intr_int, char *msg_threshold, char *msg_growing, char *msg_error);
+ ev_gc_counter ev_counter_name,
+ char *msg_threshold, char *msg_growing, char *msg_error);
 
 Caml_inline void *generic_table_get (struct generic_table *tbl,
                                       asize_t index, asize_t element_size)
