@@ -139,9 +139,9 @@ OCaml 4.14.0
 - #10955: There is no fixed limit for the number of domains anymore. When the
   program runs out of space while trying to create a new domain, the world is
   stopped to increase the maximum number of domains. Gc.set changes the minor
-  heap size on all currently running domains: New domains still use the
-  init_minor_heap_wsz parameter. To set the number of domains which can be
-  accommodated without a resize, the OCAMLRUNPARAM parameter 'd' can be used.
+  heap size on the current domain, as well as all newly-created domains. To set
+  the number of domains which can be accommodated without a resize, the
+  OCAMLRUNPARAM parameter 'd' can be used.
   (Sabine Schmaltz, Gabriel Scherer, KC Sivaramakrishnan, review by ...)
 
 * #9391, #9424: Fix failed assertion in runtime due to ephemerons *set_* and

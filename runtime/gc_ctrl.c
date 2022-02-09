@@ -38,6 +38,10 @@
 #include "caml/eventlog.h"
 #include "caml/fail.h"
 
+
+extern uintnat caml_max_domains; /* see domain.c */
+extern uintnat caml_minor_heap_max_wsz; /* see domain.c */
+
 uintnat caml_max_stack_size;
 uintnat caml_fiber_wsz;
 
@@ -295,6 +299,9 @@ CAMLprim value caml_get_minor_free (value v)
 
 void caml_init_gc (void)
 {
+  caml_max_domains = caml_params->max_domains;
+  caml_minor_heap_max_wsz = caml_params->init_minor_heap_wsz;
+
   alloc_generic_table ((struct generic_table *) &caml_sampled_gc_stats,
                        caml_max_domains,
                        0,
@@ -317,7 +324,7 @@ void caml_init_gc (void)
   #ifdef NATIVE_CODE
   caml_init_frame_descriptors();
   #endif
-  caml_init_domains(caml_params->init_minor_heap_wsz);
+  caml_init_domains();
 /*
   caml_major_heap_increment = major_incr;
   caml_percent_free = norm_pfree (percent_fr);

@@ -2,7 +2,9 @@
    ocamlrunparam += ",s=512k"
 *)
 
-(* TODO: remove ocamlrunparam, as this should be working without that*)
+(* TODO: remove ocamlrunparam, as resizing the minor heap past the existing
+maximum will be working without that, but incurs a stop-the-world reallocation
+of all domains' heaps *)
 
 open Gc
 

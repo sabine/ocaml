@@ -46,16 +46,6 @@
 #include "caml/weak.h"
 
 
-uintnat caml_max_domains = Max_domains_def;
-/* size of the virtual memory reservation for the minor heap, per domain. I.e.
-the amount of memory reserved for all minor heaps of all domains is
-caml_max_domains * caml_minor_heap_max_wsz. Individual domains can allocate
-smaller minor heaps, but when a domain calls Gc.set to allocate a bigger minor
-heap than this reservation, we stop the world and do a minor collection on all
-domains to decommit and perform a new virtual memory reservation based on the
-increased minor heap size. */
-uintnat caml_minor_heap_max_wsz = Minor_heap_def;
-
 /* From a runtime perspective, domains must handle stop-the-world (STW)
    sections, during which:
     - they are within a section no mutator code is running
@@ -202,6 +192,29 @@ Caml_inline struct dom_internal* get_domain (asize_t index)
 }
 
 CAMLexport atomic_uintnat caml_num_domains_running;
+
+
+
+/* maximum number of domains */
+uintnat caml_max_domains;
+/* size of the virtual memory reservation for the minor heap, per domain */
+uintnat caml_minor_heap_max_wsz;
+/*
+  The amount of memory reserved for all minor heaps of all domains is
+  caml_max_domains * caml_minor_heap_max_wsz. Individual domains can allocate
+  smaller minor heaps, but when a domain calls Gc.set to allocate a bigger minor
+  heap than this reservation, we perform a new virtual memory reservation based
+  on the increased minor heap size.
+
+  New domains are created with a minor heap of size caml_minor_heap_max_wsz.
+
+  Similarly, when we run out of domains at domain creation, or a domain calls
+  Gc.set to change the number of max_domains, we update caml_max_domains and
+  perform a new virtual memory reservation.
+
+  To perform a new virtual memory reservation for the heaps, we stop the world
+  and do a minor collection on all domains.
+*/
 
 CAMLexport uintnat caml_minor_heaps_base;
 CAMLexport uintnat caml_minor_heaps_end;
@@ -622,7 +635,7 @@ CAMLexport void caml_reset_domain_lock(void)
   return;
 }
 
-void caml_init_domains(uintnat minor_heap_wsz) {
+void caml_init_domains() {
   int i;
   uintnat size;
   uintnat participating_size;
@@ -694,7 +707,7 @@ void caml_init_domains(uintnat minor_heap_wsz) {
          domain_minor_heap_base + Bsize_wsize(caml_minor_heap_max_wsz);
   }
 
-  create_domain(minor_heap_wsz);
+  create_domain(caml_minor_heap_max_wsz);
   if (!domain_self) caml_fatal_error("Failed to create main domain");
   CAMLassert (domain_self->state->unique_id == 0);
 
@@ -886,7 +899,7 @@ static void* domain_thread_func(void* v)
   sigset_t mask = *(p->mask);
 #endif
 
-  create_domain(caml_params->init_minor_heap_wsz);
+  create_domain(caml_minor_heap_max_wsz);
   /* this domain is now part of the STW participant set */
   p->newdom = domain_self;
 
