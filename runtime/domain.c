@@ -798,6 +798,12 @@ void caml_init_domains() {
   heaps_size = get_minor_heap_reservation_size();
   reserve_minor_heaps(heaps_size);
 
+  // TODO: maybe we don't want to use our per-domain table machinery
+  // here to avoid changing there inside a STW critical region.
+  // Sabine suggests hardcoding a fixed limit (4096?) for:
+  // - stw_request
+  // - stw_domains
+  // TODO: what to do about all_domains?
   if (stw_request.participating.base == NULL) {
     alloc_generic_table ((struct generic_table *) &stw_request.participating,
                        caml_max_domains,

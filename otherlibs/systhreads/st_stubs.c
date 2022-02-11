@@ -379,6 +379,7 @@ CAMLprim value caml_thread_initialize_domain(value v)
   st_initialize(caml_max_domains);
 
   if (thread_table.base == NULL) {
+    // TODO register per-domain table
     alloc_generic_table ((struct generic_table *) &thread_table,
                        caml_max_domains,
                        0,
