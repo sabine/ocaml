@@ -1,10 +1,4 @@
-(* TEST
-   ocamlrunparam += ",s=512k"
-*)
-
-(* TODO: remove ocamlrunparam, as resizing the minor heap past the existing
-maximum will be working without that, but incurs a stop-the-world reallocation
-of all domains' heaps *)
+(* TEST *)
 
 open Gc
 
@@ -14,7 +8,7 @@ let stack_limit = 4194304 (* 4M *)
 let custom_major_ratio = 40
 let custom_minor_ratio = 99
 let custom_minor_max_size = 4096
-let max_domains = 64
+let max_domains = 128
 
 let _ =
   let g1 = Gc.get() in

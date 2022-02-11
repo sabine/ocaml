@@ -205,16 +205,32 @@ CAMLprim value caml_gc_set(value v)
   /* Minor heap size comes last because it will trigger a minor collection
      (thus invalidating [v]) and it can raise [Out_of_memory]. */
   newminwsz = caml_norm_minor_heap_size (Long_val (Field (v, 0)));
+  caml_gc_message (0x20, "Gc.set old size: %ld new size: %ld requested size: %ld\n",
+        Caml_state->minor_heap_wsz,
+        newminwsz,
+        Long_val (Field (v, 0)));
   if (newminwsz != Caml_state->minor_heap_wsz){
     caml_gc_message (0x20, "New minor heap size: %"
                      ARCH_SIZET_PRINTF_FORMAT "uk words\n", newminwsz / 1024);
-    caml_set_minor_heap_size (newminwsz);
+    if (newminwsz <= caml_minor_heap_max_wsz) {
+      caml_set_minor_heap_size (newminwsz);
+    } else {
+      //Caml_state->minor_heap_wsz = newminwsz;
+      caml_gc_message (0x20, "Gc.set old size: %ld new size: %ld\n",
+              Caml_state->minor_heap_wsz,
+              newminwsz);
+      caml_update_minor_heap_max_and_max_domains(newminwsz, caml_max_domains);
+      // FIXME: the current domain reallocates its own minor heap twice
+      caml_set_minor_heap_size (newminwsz);
+      caml_gc_message (0x20, "current size: %ld\n",
+              Caml_state->minor_heap_wsz);
+    }
   }
   new_max_domains = Long_val (Field (v, 11));
   if (new_max_domains != caml_max_domains) {
-    caml_max_domains = new_max_domains;
-    // TODO: reallocate all the things that depends on caml_max_domains
-    // accordingly
+    // FIXME: we are calling this twice in case both max_domains and
+    // minor_heap_wsz change
+    caml_update_minor_heap_max_and_max_domains(newminwsz, new_max_domains);
   }
 
   CAML_EV_END(EV_EXPLICIT_GC_SET);

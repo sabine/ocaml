@@ -389,20 +389,16 @@ void caml_domain_set_name(char *name)
 
 asize_t caml_norm_minor_heap_size (intnat wsize)
 {
-  asize_t bs, max;
+  asize_t bs;
   if (wsize < Minor_heap_min) wsize = Minor_heap_min;
   bs = caml_mem_round_up_pages(Bsize_wsize (wsize));
-
-  max = Bsize_wsize(caml_minor_heap_max_wsz);
-
-  if (bs > max) bs = max;
 
   return Wsize_bsize(bs);
 }
 
-int caml_reallocate_minor_heap(asize_t wsize)
-{
+void caml_free_minor_heap() {
   caml_domain_state* domain_state = Caml_state;
+
   CAMLassert(domain_state->young_ptr == domain_state->young_end);
 
   /* free old minor heap.
@@ -412,6 +408,18 @@ int caml_reallocate_minor_heap(asize_t wsize)
       (void*)domain_self->minor_heap_area,
       domain_self->minor_heap_area_end - domain_self->minor_heap_area);
 
+  //domain_state->minor_heap_wsz = wsize;
+
+  domain_state->young_start = NULL;
+  domain_state->young_end = NULL;
+  atomic_store_rel(&domain_state->young_limit,
+                   (uintnat) domain_state->young_start);
+  domain_state->young_ptr = domain_state->young_end;
+}
+
+int caml_allocate_minor_heap(asize_t wsize) {
+  caml_domain_state* domain_state = Caml_state;
+  
   wsize = caml_norm_minor_heap_size(wsize);
 
   if (!caml_mem_commit(
@@ -438,6 +446,13 @@ int caml_reallocate_minor_heap(asize_t wsize)
                    (uintnat) domain_state->young_start);
   domain_state->young_ptr = domain_state->young_end;
   return 0;
+}
+
+int caml_reallocate_minor_heap(asize_t wsize)
+{
+  caml_free_minor_heap();
+
+  return caml_allocate_minor_heap(wsize);
 }
 
 /* This variable is owned by [all_domains_lock]. */
@@ -635,25 +650,81 @@ CAMLexport void caml_reset_domain_lock(void)
   return;
 }
 
-void caml_init_domains() {
-  int i;
-  uintnat size;
-  void* heaps_base;
-
+uintnat get_minor_heap_reservation_size() {
   /* sanity check configuration */
   if (caml_mem_round_up_pages(Bsize_wsize(caml_minor_heap_max_wsz))
           != Bsize_wsize(caml_minor_heap_max_wsz))
     caml_fatal_error("minor_heap_max misconfigured for this platform");
 
-  /* reserve memory space for minor heaps */
-  size = (uintnat)Bsize_wsize(caml_minor_heap_max_wsz) * caml_max_domains;
+  return (uintnat)Bsize_wsize(caml_minor_heap_max_wsz) 
+                                          * caml_max_domains;
+}
 
-  heaps_base = caml_mem_map(size, size, 1 /* reserve_only */);
+void reserve_minor_heaps(uintnat size) {
+  void* heaps_base;
+
+  /* reserve memory space for minor heaps */
+  heaps_base = caml_mem_map(size, size,
+                                         1 /* reserve_only */);
   if (heaps_base == NULL)
-    caml_fatal_error("Not enough heap memory to start up");
+    caml_fatal_error("Not enough heap memory to reserve minor heaps");
 
   caml_minor_heaps_base = (uintnat) heaps_base;
   caml_minor_heaps_end = (uintnat) heaps_base + size;
+}
+
+void unreserve_minor_heaps() {
+  uintnat size;
+
+  size = caml_minor_heaps_end - caml_minor_heaps_base;
+  caml_mem_unmap((void *) caml_minor_heaps_base, size);
+}
+
+static void caml_stw_resize_minor_heap_and_update_max_domains (caml_domain_state* domain, void* unused,
+                                       int participating_count,
+                                       caml_domain_state** participating) {
+  barrier_status b;
+  uintnat size;
+
+  caml_empty_minor_heap_no_major_slice_from_stw(domain, unused,
+                                            participating_count, participating);
+  //CAML_EV_BEGIN(EV_MAJOR_GC_PHASE_CHANGE);
+  caml_free_minor_heap();
+
+  b = caml_global_barrier_begin ();
+  if (caml_global_barrier_is_final(b)) {
+    // TODO: resize tables
+
+    unreserve_minor_heaps();
+    size = get_minor_heap_reservation_size();
+    reserve_minor_heaps(size);
+  }
+  caml_global_barrier_end(b);
+
+  caml_allocate_minor_heap(Caml_state->minor_heap_wsz);
+
+  //CAML_EV_END(EV_MAJOR_GC_PHASE_CHANGE);
+}
+
+void caml_update_minor_heap_max_and_max_domains(uintnat minor_heap_wsz,
+        uintnat max_domains) {
+  CAMLassert(minor_heap_wsz > caml_minor_heap_max_wsz);
+
+  // FIXME: unclear if that breaks
+  caml_minor_heap_max_wsz = minor_heap_wsz;
+  caml_max_domains = max_domains;
+
+  caml_try_run_on_all_domains(
+    &caml_stw_resize_minor_heap_and_update_max_domains, NULL, 0);
+}
+
+void caml_init_domains() {
+  int i;
+  //void* heaps_base;
+  uintnat heaps_size;
+
+  heaps_size = get_minor_heap_reservation_size();
+  reserve_minor_heaps(heaps_size);
 
   if (stw_request.participating.base == NULL) {
     alloc_generic_table ((struct generic_table *) &stw_request.participating,

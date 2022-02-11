@@ -38,6 +38,8 @@ extern uintnat caml_max_domains;
 
 asize_t caml_norm_minor_heap_size (intnat);
 int caml_reallocate_minor_heap(asize_t);
+void caml_update_minor_heap_max_and_max_domains(uintnat minor_heap_wsz,
+  uintnat max_domains);
 
 int caml_incoming_interrupts_queued(void);
 
