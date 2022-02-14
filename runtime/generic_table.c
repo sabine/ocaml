@@ -1,3 +1,9 @@
+#define CAML_INTERNALS
+
+#include "caml/generic_table.h"
+#include "caml/memory.h"
+#include "caml/signals.h"
+
 /* [sz] and [rsv] are numbers of entries */
 void alloc_generic_table (struct generic_table *tbl, asize_t sz,
                                  asize_t rsv, asize_t element_size)

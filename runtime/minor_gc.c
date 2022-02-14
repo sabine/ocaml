@@ -25,6 +25,7 @@
 #include "caml/fail.h"
 #include "caml/fiber.h"
 #include "caml/finalise.h"
+#include "caml/generic_table.h"
 #include "caml/gc.h"
 #include "caml/gc_ctrl.h"
 #include "caml/globroots.h"

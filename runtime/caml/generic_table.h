@@ -31,10 +31,10 @@
 
 struct generic_table CAML_TABLE_STRUCT(char);
 
-void alloc_generic_table (struct generic_table *tbl, asize_t sz,
+extern void alloc_generic_table (struct generic_table *tbl, asize_t sz,
                                  asize_t rsv, asize_t element_size);
 
-void realloc_generic_table (struct generic_table *tbl, asize_t element_size,
+extern void realloc_generic_table (struct generic_table *tbl, asize_t element_size,
  ev_gc_counter ev_counter_name,
  char *msg_threshold, char *msg_growing, char *msg_error);
 
