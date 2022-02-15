@@ -19,30 +19,26 @@
 #include "misc.h"
 #include "eventlog.h"
 
-#define CAML_TABLE_STRUCT(t) { \
+#define CAML_DOMAINS_TABLE_STRUCT(t) { \
   t *base;                     \
   t *end;                      \
-  t *threshold;                \
   t *ptr;                      \
-  t *limit;                    \
   asize_t size;                \
-  asize_t reserve;             \
 }
 
-struct generic_table CAML_TABLE_STRUCT(char);
+struct domains_table CAML_DOMAINS_TABLE_STRUCT(char);
 
-extern void alloc_generic_table (struct generic_table *tbl, asize_t sz,
-                                 asize_t rsv, asize_t element_size);
+extern void alloc_domains_table
+  (struct domains_table *tbl, asize_t element_size);
 
-extern void realloc_generic_table (struct generic_table *tbl, asize_t element_size,
- ev_gc_counter ev_counter_name,
- char *msg_threshold, char *msg_growing, char *msg_error);
+extern void realloc_domains_table
+  (struct domains_table *tbl, asize_t element_size);
 
-Caml_inline void *generic_table_get (struct generic_table *tbl,
+Caml_inline void *domains_table_get (struct domains_table *tbl,
                                       asize_t index, asize_t element_size)
 {
   if (index > tbl->size ) {
-    caml_fatal_error ("generic table - index out of bounds");
+    caml_fatal_error ("domains table - index out of bounds");
   }
   return tbl->base + index * element_size;
 }

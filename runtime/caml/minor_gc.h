@@ -18,7 +18,6 @@
 
 #include "misc.h"
 #include "config.h"
-#include "generic_table.h"
 #include "domain.h"
 
 #define caml_young_end Caml_state->young_end
@@ -28,6 +27,16 @@
 #define caml_young_alloc_start Caml_state->young_start
 #define caml_young_alloc_end Caml_state->young_end
 #define caml_minor_heap_wsz Caml_state->minor_heap_wsz
+
+#define CAML_TABLE_STRUCT(t) { \
+  t *base;                     \
+  t *end;                      \
+  t *threshold;                \
+  t *ptr;                      \
+  t *limit;                    \
+  asize_t size;                \
+  asize_t reserve;             \
+}
 
 struct caml_ref_table CAML_TABLE_STRUCT(value *);
 

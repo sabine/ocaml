@@ -31,7 +31,7 @@
 #include "caml/fail.h"
 #include "caml/fiber.h"
 #include "caml/finalise.h"
-#include "caml/generic_table.h"
+#include "caml/domains_table.h"
 #include "caml/gc_ctrl.h"
 #include "caml/globroots.h"
 #include "caml/intext.h"
@@ -141,7 +141,7 @@ struct dom_internal {
 };
 typedef struct dom_internal dom_internal;
 
-struct caml_domain_state_ptr_table CAML_TABLE_STRUCT(caml_domain_state*);
+struct caml_domain_state_ptr_table CAML_DOMAINS_TABLE_STRUCT(caml_domain_state*);
 
 static struct {
   atomic_uintnat domains_still_running;
@@ -175,7 +175,7 @@ static struct {
 Caml_inline caml_domain_state** get_stw_participating_domain_ptr
                                                           (asize_t index)
 {
-  return generic_table_get((struct generic_table*) &stw_request.participating,
+  return domains_table_get((struct domains_table*) &stw_request.participating,
                             index, sizeof (caml_domain_state*));
 }
 
@@ -184,11 +184,11 @@ static caml_plat_cond all_domains_cond =
     CAML_PLAT_COND_INITIALIZER(&all_domains_lock);
 static atomic_uintnat /* dom_internal* */ stw_leader = 0;
 
-struct dom_internal_table CAML_TABLE_STRUCT(struct dom_internal);
+struct dom_internal_table CAML_DOMAINS_TABLE_STRUCT(struct dom_internal);
 static struct dom_internal_table all_domains;
 Caml_inline struct dom_internal* get_domain (asize_t index)
 {
-  return generic_table_get((struct generic_table*) &all_domains,
+  return domains_table_get((struct domains_table*) &all_domains,
                             index, sizeof (struct dom_internal));
 }
 
@@ -222,7 +222,7 @@ CAMLexport uintnat caml_minor_heaps_end;
 static __thread dom_internal* domain_self;
 
 
-struct dom_internal_ptr_table CAML_TABLE_STRUCT(struct dom_internal*);
+struct dom_internal_ptr_table CAML_DOMAINS_TABLE_STRUCT(struct dom_internal*);
 /*
  * This structure is protected by all_domains_lock
  * [0, participating_domains) are all the domains taking part in STW sections
@@ -238,7 +238,7 @@ static struct {
 
 Caml_inline struct dom_internal** get_stw_domain_ptr (asize_t index)
 {
-  return generic_table_get((struct generic_table*) &stw_domains.domains,
+  return domains_table_get((struct domains_table*) &stw_domains.domains,
                             index, sizeof (struct dom_internal*));
 }
 
@@ -393,6 +393,8 @@ asize_t caml_norm_minor_heap_size (intnat wsize)
   asize_t bs;
   if (wsize < Minor_heap_min) wsize = Minor_heap_min;
   bs = caml_mem_round_up_pages(Bsize_wsize (wsize));
+
+  if (wsize > caml_minor_heap_max_wsz) bs = caml_minor_heap_max_wsz;
 
   return Wsize_bsize(bs);
 }
@@ -651,77 +653,6 @@ CAMLexport void caml_reset_domain_lock(void)
   return;
 }
 
-/* per-domain tables */
-
-/* Per-domain tables */
-struct per_domain_table_list {
-  struct per_domain_table_list* next;
-  struct generic_table* table;
-  asize_t element_size;
-  char* name;
-};
-static struct per_domain_table_list* per_domain_table_list = NULL;
-
-/* precondition: the table [table] is not already in the per-domain table list.
-   we assume [name] is a static string, and will not deallocate it.
- */
-void caml_register_per_domain_table(struct generic_table * table,
-                                        asize_t element_size, char * name)
-{
-  struct per_domain_table_list* l =
-    caml_stat_alloc(sizeof(struct per_domain_table_list));
-
-  // FIXME: consider growing the table here if it fails
-  CAMLassert(table->size >= caml_max_domains);
-
-  l->table = table;
-  l->next = per_domain_table_list;
-  l->element_size = element_size;
-  l->name = name;
-  per_domain_table_list = l;
-  #ifdef DEBUG
-  // check that [table] does not occur in the rest of the list.
-  for (l = per_domain_table_list->next; l != NULL; l = l->next) {
-    CAMLassert(l->table != table);
-  }
-  #endif
-}
-
-/* precondition: the table [to_remove] belongs to the per-domain table list. */
-void caml_remove_per_domain_table(struct generic_table *to_remove)
-{
-  struct per_domain_table_list* l = per_domain_table_list;
-  if (l->table == to_remove) {
-    per_domain_table_list = l->next;
-  }
-  for (; l != NULL; l = l->next) {
-    if (l->next->table == to_remove) {
-      l->next = l->next->next;
-      return;
-    }
-  }
-  CAMLassert(0); // check that [to_remove] in fact occurred in the list.
-  return;
-}
-
-static void grow_per_domain_table(const struct generic_table *table, asize_t element_size, int capacity)
-{
-  // FIXME ideally we would need to use the name here
-  realloc_generic_table
-    ((struct generic_table *) table, sizeof (struct caml_custom_elt),
-     EC_C_REQUEST_GROW_PER_DOMAIN_TABLE,
-     "per-domain table threshold crossed\n",
-     "Growing per-domain table to %" ARCH_INTNAT_PRINTF_FORMAT "dk bytes\n",
-     "per-domain table overflow");
-}
-
-void caml_grow_per_domain_tables(int capacity) {
-  struct per_domain_table_list * l = per_domain_table_list;
-  for (; l != NULL; l = l->next) {
-    grow_per_domain_table(l->table, l->element_size, capacity);
-  }
-}
-
 /* minor heap initialization and resizing */
 
 uintnat get_minor_heap_reservation_size() {
@@ -811,22 +742,16 @@ void caml_init_domains() {
   // - stw_domains
   // TODO: what to do about all_domains?
   if (stw_request.participating.base == NULL) {
-    alloc_generic_table ((struct generic_table *) &stw_request.participating,
-                       caml_max_domains,
-                       0,
+    alloc_domains_table ((struct domains_table *) &stw_request.participating,
                        sizeof (struct caml_domain_state*));
   }
   
   if (all_domains.base == NULL) {
-    alloc_generic_table ((struct generic_table *) &all_domains,
-                       caml_max_domains,
-                       0,
+    alloc_domains_table ((struct domains_table *) &all_domains,
                        sizeof (struct dom_internal));
   }
   if (stw_domains.domains.base == NULL) {
-    alloc_generic_table ((struct generic_table *) &stw_domains.domains,
-                       caml_max_domains,
-                       0,
+    alloc_domains_table ((struct domains_table *) &stw_domains.domains,
                        sizeof (struct dom_internal*));
   }
 

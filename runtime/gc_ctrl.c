@@ -18,7 +18,7 @@
 #include "caml/alloc.h"
 #include "caml/custom.h"
 #include "caml/finalise.h"
-#include "caml/generic_table.h"
+#include "caml/domains_table.h"
 #include "caml/gc.h"
 #include "caml/gc_ctrl.h"
 #include "caml/major_gc.h"
@@ -317,11 +317,9 @@ void caml_init_gc (void)
   caml_max_domains = caml_params->max_domains;
   caml_minor_heap_max_wsz = caml_params->init_minor_heap_wsz;
 
-  alloc_generic_table ((struct generic_table *) &caml_sampled_gc_stats,
-                       caml_max_domains,
-                       0,
+  alloc_domains_table ((struct domains_table *) &caml_sampled_gc_stats,
                        sizeof (struct gc_stats));
-  caml_register_per_domain_table((struct generic_table*) &caml_sampled_gc_stats,
+  caml_register_per_domain_table((struct domains_table*) &caml_sampled_gc_stats,
                                  sizeof (struct gc_stats),
                                  "sampled_gc_stats");
 

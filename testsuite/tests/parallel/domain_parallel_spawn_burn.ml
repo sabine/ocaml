@@ -3,13 +3,21 @@
 include unix
 ** bytecode
 ** native
-  ocamlrunparam += ",d=32"
 *)
 
 open Domain
 
-(* This test looks to spawn domains while doing a bunch of explicit minor and major GC calls
-   from parallel domains *)
+(* This test looks to spawn domains while doing a bunch of explicit minor and
+   major GC calls from parallel domains *)
+
+let rec set_gc l =
+  if l > 16 then ()
+  else
+    let g1 = Gc.get() in
+      Gc.set { g1 with
+        minor_heap_size = ((l mod 4) + 1) * 262144; (*131072; NOTE: this fails*)
+        max_domains = ((l mod 2) + 1) * 64; 
+      }
 
 let rec burn l =
   if List.hd l > 14 then ()
@@ -32,13 +40,19 @@ let () =
     done
   in
 
-  let domain_minor_gc = Domain.spawn (run_until_stop (fun () -> burn [8]; Gc.minor ())) in
-  let domain_major_gc = Domain.spawn (run_until_stop (fun () -> burn [8]; Gc.major ())) in
+  let domain_minor_gc = 
+    Domain.spawn (run_until_stop (fun () -> burn [8]; Gc.minor ())) in
+  let domain_major_gc = 
+    Domain.spawn (run_until_stop (fun () -> burn [8]; Gc.major ())) in
+  let domain_set_gc = Domain.spawn (run_until_stop (fun () -> set_gc 1; )) in
+  (*let domain_set_gc2 = Domain.spawn (run_until_stop (fun () -> set_gc 3; )) in*)
 
   test_parallel_spawn ();
 
   running := false;
+  join domain_set_gc;
   join domain_minor_gc;
   join domain_major_gc;
+  (*join domain_set_gc2;*) (* two domains using Gc.set fails with segmentation fault on bytecode*)
 
   print_endline "ok"

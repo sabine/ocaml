@@ -104,11 +104,11 @@ struct caml_thread_table {
 };
 
 /* thread_table instance, up to caml_max_domains */
-struct thread_table CAML_TABLE_STRUCT(struct caml_thread_table);
+struct thread_table CAML_DOMAINS_TABLE_STRUCT(struct caml_thread_table);
 static struct thread_table thread_table;
 Caml_inline struct caml_thread_table* get_thread_table (asize_t index)
 {
-  return generic_table_get((struct generic_table*) &thread_table,
+  return domains_table_get((struct domains_table*) &thread_table,
                             index, sizeof (struct caml_thread_table));
 }
 
@@ -380,9 +380,7 @@ CAMLprim value caml_thread_initialize_domain(value v)
 
   if (thread_table.base == NULL) {
     // TODO register per-domain table
-    alloc_generic_table ((struct generic_table *) &thread_table,
-                       caml_max_domains,
-                       0,
+    alloc_domains_table ((struct domains_table *) &thread_table,
                        sizeof (struct caml_thread_table));
   }
 

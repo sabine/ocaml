@@ -33,11 +33,11 @@
 typedef int st_retcode;
 
 /* Variables used to stop "tick" threads, length caml_max_domains */
-struct tick_thread_stop_table CAML_TABLE_STRUCT(atomic_uintnat);
+struct tick_thread_stop_table CAML_DOMAINS_TABLE_STRUCT(atomic_uintnat);
 static struct tick_thread_stop_table tick_thread_stop;
 Caml_inline atomic_uintnat* get_tick_thread_stop (asize_t index)
 {
-  return generic_table_get((struct generic_table*) &tick_thread_stop,
+  return domains_table_get((struct domains_table*) &tick_thread_stop,
                             index, sizeof (atomic_uintnat));
 }
 #define Tick_thread_stop (*get_tick_thread_stop(Caml_state->id))
@@ -48,9 +48,7 @@ static int st_initialize(uintnat max_domains)
 {
   if (tick_thread_stop.base == NULL) {
     // TODO register per-domain table
-    alloc_generic_table ((struct generic_table *) &tick_thread_stop,
-                       max_domains,
-                       0,
+    alloc_domains_table ((struct domains_table *) &tick_thread_stop,
                        sizeof (atomic_uintnat));
   }
   atomic_store_rel(&Tick_thread_stop, 0);
