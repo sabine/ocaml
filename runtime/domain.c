@@ -197,9 +197,9 @@ CAMLexport atomic_uintnat caml_num_domains_running;
 
 
 /* maximum number of domains */
-uintnat caml_max_domains;
+atomic_uintnat caml_max_domains;
 /* size of the virtual memory reservation for the minor heap, per domain */
-uintnat caml_minor_heap_max_wsz;
+atomic_uintnat caml_minor_heap_max_wsz;
 /*
   The amount of memory reserved for all minor heaps of all domains is
   caml_max_domains * caml_minor_heap_max_wsz. Individual domains can allocate
@@ -394,8 +394,6 @@ asize_t caml_norm_minor_heap_size (intnat wsize)
   if (wsize < Minor_heap_min) wsize = Minor_heap_min;
   bs = caml_mem_round_up_pages(Bsize_wsize (wsize));
 
-  if (wsize > caml_minor_heap_max_wsz) bs = caml_minor_heap_max_wsz;
-
   return Wsize_bsize(bs);
 }
 
@@ -404,14 +402,15 @@ void caml_free_minor_heap() {
 
   CAMLassert(domain_state->young_ptr == domain_state->young_end);
 
+  caml_gc_message (0x20, "trying to free old minor heap: %"
+                     ARCH_SIZET_PRINTF_FORMAT "uk words\n", domain_state->minor_heap_wsz / 1024);
+
   /* free old minor heap.
      instead of unmapping the heap, we decommit it, so there's
      no race whereby other code could attempt to reuse the memory. */
   caml_mem_decommit(
       (void*)domain_self->minor_heap_area,
       domain_self->minor_heap_area_end - domain_self->minor_heap_area);
-
-  //domain_state->minor_heap_wsz = wsize;
 
   domain_state->young_start = NULL;
   domain_state->young_end = NULL;
@@ -424,6 +423,11 @@ int caml_allocate_minor_heap(asize_t wsize) {
   caml_domain_state* domain_state = Caml_state;
   
   wsize = caml_norm_minor_heap_size(wsize);
+
+  if (wsize > caml_minor_heap_max_wsz) wsize = atomic_load(&caml_minor_heap_max_wsz);
+
+  caml_gc_message (0x20, "trying to allocate minor heap: %"
+                     ARCH_SIZET_PRINTF_FORMAT "uk words\n", wsize / 1024);
 
   if (!caml_mem_commit(
           (void*)domain_self->minor_heap_area, Bsize_wsize(wsize))) {
@@ -706,7 +710,7 @@ static void caml_stw_resize_minor_heap_and_update_max_domains(
     CAML_EV_END(EV_DOMAIN_RESIZE_HEAP_RESERVATION);
 
     CAML_EV_BEGIN(EV_DOMAIN_CHANGE_MAX_DOMAINS);
-// TODO: resize tables
+    caml_grow_per_domain_tables(atomic_load(&caml_max_domains));
     CAML_EV_END(EV_DOMAIN_CHANGE_MAX_DOMAINS);
   }
   
@@ -717,14 +721,23 @@ static void caml_stw_resize_minor_heap_and_update_max_domains(
 
 void caml_update_minor_heap_max_and_max_domains(uintnat minor_heap_wsz,
         uintnat max_domains) {
-  CAMLassert(minor_heap_wsz > caml_minor_heap_max_wsz);
+  int changed;
+  // FIXME: unclear if we are breaking invariants by updating these values
+  // here already
+  if(minor_heap_wsz > atomic_load(&caml_minor_heap_max_wsz)) {
+    atomic_store(&caml_minor_heap_max_wsz, minor_heap_wsz);
+    changed = 1;
+  };
+  
+  if (max_domains > atomic_load(&caml_max_domains)) {
+    atomic_store(&caml_max_domains, max_domains);
+    changed = 1;
+  }
 
-  // FIXME: unclear if that breaks
-  caml_minor_heap_max_wsz = minor_heap_wsz;
-  caml_max_domains = max_domains;
-
-  caml_try_run_on_all_domains(
-    &caml_stw_resize_minor_heap_and_update_max_domains, NULL, 0);
+  if (changed) {
+    caml_try_run_on_all_domains(
+      &caml_stw_resize_minor_heap_and_update_max_domains, NULL, 0);
+  }
 }
 
 void caml_init_domains() {

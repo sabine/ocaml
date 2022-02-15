@@ -22,10 +22,10 @@ void alloc_domains_table (
 }
 
 void realloc_domains_table(
-  struct domains_table *tbl, asize_t element_size)
+  struct domains_table *tbl, uintnat max_domains, asize_t element_size)
 {
   CAMLassert (tbl->ptr <= tbl->end);
-  CAMLassert (caml_max_domains > tbl->size);
+  CAMLassert (max_domains > tbl->size);
 
   if (tbl->base == NULL){
     alloc_domains_table (tbl, element_size);
@@ -33,7 +33,7 @@ void realloc_domains_table(
     asize_t sz;
     asize_t cur_ptr = tbl->ptr - tbl->base;
 
-    tbl->size = caml_max_domains;
+    tbl->size = max_domains;
     sz = tbl->size * element_size;
     tbl->base = caml_stat_resize_noexc (tbl->base, sz);
     if (tbl->base == NULL){
@@ -100,15 +100,17 @@ void caml_remove_per_domain_table(struct domains_table* to_remove)
 }
 */
 
-static void grow_per_domain_table(const struct domains_table* table, asize_t element_size, int capacity)
+static void grow_per_domain_table(const struct domains_table* table, asize_t element_size, uintnat max_domains)
 {
   // FIXME ideally we use the name here for logging/debugging
-  realloc_domains_table ((struct domains_table*) table, element_size);
+  realloc_domains_table ((struct domains_table*) table, max_domains, element_size);
 }
 
-void caml_grow_per_domain_tables(int capacity) {
+void caml_grow_per_domain_tables(uintnat max_domains) {
   struct per_domain_table_list * l = per_domain_table_list;
   for (; l != NULL; l = l->next) {
-    grow_per_domain_table(l->table, l->element_size, capacity);
+    caml_gc_message (0x20, "Growing per-domain table %s to: %"
+                     ARCH_INTNAT_PRINTF_FORMAT "u\n", l->name, max_domains);
+    grow_per_domain_table(l->table, l->element_size, max_domains);
   }
 }

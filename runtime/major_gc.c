@@ -37,7 +37,7 @@
 #include "caml/weak.h"
 #include "caml/skiplist.h"
 
-extern uintnat caml_max_domains;          /* see domain.c */
+extern atomic_uintnat caml_max_domains;          /* see domain.c */
 
 /* NB the MARK_STACK_INIT_SIZE must be larger than the number of objects
    that can be in a pool, see POOL_WSIZE */

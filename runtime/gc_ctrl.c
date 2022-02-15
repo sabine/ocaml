@@ -40,9 +40,6 @@
 #include "caml/fail.h"
 
 
-extern uintnat caml_max_domains; /* see domain.c */
-extern uintnat caml_minor_heap_max_wsz; /* see domain.c */
-
 uintnat caml_max_stack_size;
 uintnat caml_fiber_wsz;
 
@@ -53,7 +50,8 @@ extern uintnat caml_allocation_policy;    /*        see freelist.c */
 extern uintnat caml_custom_major_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_max_bsz; /* see custom.c */
-extern uintnat caml_max_domains;          /* see domain.c */
+extern atomic_uintnat caml_max_domains; /* see domain.c */
+extern atomic_uintnat caml_minor_heap_max_wsz; /* see domain.c */
 extern struct sampled_gc_stats_table caml_sampled_gc_stats; /* see major_gc.c */
 
 CAMLprim value caml_gc_quick_stat(value v)
@@ -208,28 +206,27 @@ CAMLprim value caml_gc_set(value v)
   newminwsz = caml_norm_minor_heap_size (Long_val (Field (v, 0)));
   new_max_domains = Long_val (Field (v, 11));
 
-  if (newminwsz != Caml_state->minor_heap_wsz){
+  if (newminwsz != Caml_state->minor_heap_wsz) {
     caml_gc_message (0x20, "New minor heap size: %"
                      ARCH_SIZET_PRINTF_FORMAT "uk words\n", newminwsz / 1024);
-    if (newminwsz <= caml_minor_heap_max_wsz) {
-      caml_set_minor_heap_size (newminwsz);
-    } else {
-      caml_update_minor_heap_max_and_max_domains(newminwsz, caml_max_domains);
-      // FIXME: the current domain reallocates its own minor heap twice
-      caml_set_minor_heap_size (newminwsz);
-      caml_gc_message (0x20, "current size: %ld\n",
-              Caml_state->minor_heap_wsz);
-    }
   }
 
-      caml_gc_message (0x20, "New max domains: %"
-                       ARCH_INTNAT_PRINTF_FORMAT "u\n",
-                       new_max_domains);
   if (new_max_domains != caml_max_domains) {
-    // FIXME: we are calling this twice in case both max_domains and
-    // minor_heap_wsz change
-    caml_update_minor_heap_max_and_max_domains(caml_minor_heap_max_wsz,
-                                                  new_max_domains);
+    caml_gc_message (0x20, "New max domains: %"
+                       ARCH_INTNAT_PRINTF_FORMAT "u\n", new_max_domains);
+  }
+
+  if (new_max_domains != caml_max_domains 
+    || newminwsz > caml_minor_heap_max_wsz) {
+
+    caml_update_minor_heap_max_and_max_domains(newminwsz, new_max_domains);
+    if (newminwsz != Caml_state->minor_heap_wsz) {
+      // FIXME: the current domain reallocates its own minor heap twice
+      caml_set_minor_heap_size (newminwsz);
+    }
+  } else if (newminwsz != Caml_state->minor_heap_wsz && 
+    newminwsz < caml_minor_heap_max_wsz) {
+    caml_set_minor_heap_size (newminwsz);
   }
 
   CAML_EV_END(EV_EXPLICIT_GC_SET);
