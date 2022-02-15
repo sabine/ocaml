@@ -8,7 +8,7 @@ let stack_limit = 4194304 (* 4M *)
 let custom_major_ratio = 40
 let custom_minor_ratio = 99
 let custom_minor_max_size = 4096
-let max_domains = 128
+let max_domains = 256
 
 let _ =
   let g1 = Gc.get() in
