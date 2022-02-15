@@ -47,9 +47,8 @@ Caml_inline atomic_uintnat* get_tick_thread_stop (asize_t index)
 static int st_initialize(uintnat max_domains)
 {
   if (tick_thread_stop.base == NULL) {
-    // TODO register per-domain table
-    alloc_domains_table ((struct domains_table *) &tick_thread_stop,
-                       sizeof (atomic_uintnat));
+    caml_create_per_domain_table((struct domains_table *) &tick_thread_stop,
+                       sizeof (atomic_uintnat), "tick_thread_stop");
   }
   atomic_store_rel(&Tick_thread_stop, 0);
   return 0;

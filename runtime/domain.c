@@ -742,17 +742,20 @@ void caml_init_domains() {
   // - stw_domains
   // TODO: what to do about all_domains?
   if (stw_request.participating.base == NULL) {
-    alloc_domains_table ((struct domains_table *) &stw_request.participating,
-                       sizeof (struct caml_domain_state*));
+    caml_create_per_domain_table(
+      (struct domains_table *) &stw_request.participating,
+      sizeof (struct caml_domain_state*), "stw_request.participating");
   }
   
   if (all_domains.base == NULL) {
-    alloc_domains_table ((struct domains_table *) &all_domains,
-                       sizeof (struct dom_internal));
+    caml_create_per_domain_table(
+      (struct domains_table *) &all_domains,
+      sizeof (struct dom_internal), "all_domains");
   }
   if (stw_domains.domains.base == NULL) {
-    alloc_domains_table ((struct domains_table *) &stw_domains.domains,
-                       sizeof (struct dom_internal*));
+    caml_create_per_domain_table(
+      (struct domains_table *) &stw_domains.domains,
+      sizeof (struct dom_internal*), "stw_domains.domains");
   }
 
   for (i = 0; i < caml_max_domains; i++) {

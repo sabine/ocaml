@@ -43,4 +43,11 @@ Caml_inline void *domains_table_get (struct domains_table *tbl,
   return tbl->base + index * element_size;
 }
 
+
+void caml_create_per_domain_table(struct domains_table* table,
+                                        asize_t element_size, char* name);
+//void caml_remove_per_domain_table(struct domains_table*);
+void caml_grow_per_domain_tables(int);
+
+
 #endif /* CAML_GENERIC_TABLE_H */

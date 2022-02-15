@@ -317,11 +317,9 @@ void caml_init_gc (void)
   caml_max_domains = caml_params->max_domains;
   caml_minor_heap_max_wsz = caml_params->init_minor_heap_wsz;
 
-  alloc_domains_table ((struct domains_table *) &caml_sampled_gc_stats,
-                       sizeof (struct gc_stats));
-  caml_register_per_domain_table((struct domains_table*) &caml_sampled_gc_stats,
-                                 sizeof (struct gc_stats),
-                                 "sampled_gc_stats");
+  caml_create_per_domain_table(
+      (struct domains_table *) &caml_sampled_gc_stats,
+      sizeof (struct gc_stats), "caml_sampled_gc_stats");
 
   caml_max_stack_size = caml_params->init_max_stack_wsz;
   caml_fiber_wsz = (Stack_threshold * 2) / sizeof(value);

@@ -69,11 +69,6 @@ CAMLextern void caml_init_domain_self(int);
 CAMLextern uintnat caml_max_domains;
 CAMLextern uintnat caml_minor_heap_max_wsz;
 
-void caml_register_per_domain_table(struct domains_table* table,
-                                        asize_t element_size, char* name);
-void caml_remove_per_domain_table(struct domains_table*);
-void caml_grow_per_domain_tables(int);
-
 CAMLextern atomic_uintnat caml_num_domains_running;
 CAMLextern uintnat caml_minor_heaps_base;
 CAMLextern uintnat caml_minor_heaps_end;
