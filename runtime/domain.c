@@ -141,8 +141,6 @@ struct dom_internal {
 };
 typedef struct dom_internal dom_internal;
 
-struct caml_domain_state_ptr_table CAML_DOMAINS_TABLE_STRUCT(caml_domain_state*);
-
 static struct {
   atomic_uintnat domains_still_running;
   atomic_uintnat num_domains_still_processing;
@@ -159,7 +157,7 @@ static struct {
   atomic_uintnat barrier;
 
   /* length caml_max_domains */
-  struct caml_domain_state_ptr_table participating;
+  caml_domain_state* participating[4096];
 } stw_request = {
   ATOMIC_UINTNAT_INIT(0),
   ATOMIC_UINTNAT_INIT(0),
@@ -172,25 +170,12 @@ static struct {
   {0},
 };
 
-Caml_inline caml_domain_state** get_stw_participating_domain_ptr
-                                                          (asize_t index)
-{
-  return domains_table_get((struct domains_table*) &stw_request.participating,
-                            index, sizeof (caml_domain_state*));
-}
-
 static caml_plat_mutex all_domains_lock = CAML_PLAT_MUTEX_INITIALIZER;
 static caml_plat_cond all_domains_cond =
     CAML_PLAT_COND_INITIALIZER(&all_domains_lock);
 static atomic_uintnat /* dom_internal* */ stw_leader = 0;
 
-struct dom_internal_table CAML_DOMAINS_TABLE_STRUCT(struct dom_internal);
-static struct dom_internal_table all_domains;
-Caml_inline struct dom_internal* get_domain (asize_t index)
-{
-  return domains_table_get((struct domains_table*) &all_domains,
-                            index, sizeof (struct dom_internal));
-}
+static struct dom_internal all_domains[4096];
 
 CAMLexport atomic_uintnat caml_num_domains_running;
 
@@ -222,7 +207,6 @@ CAMLexport uintnat caml_minor_heaps_end;
 static __thread dom_internal* domain_self;
 
 
-struct dom_internal_ptr_table CAML_DOMAINS_TABLE_STRUCT(struct dom_internal*);
 /*
  * This structure is protected by all_domains_lock
  * [0, participating_domains) are all the domains taking part in STW sections
@@ -230,49 +214,41 @@ struct dom_internal_ptr_table CAML_DOMAINS_TABLE_STRUCT(struct dom_internal*);
  */
 static struct {
   int participating_domains;
-  struct dom_internal_ptr_table domains; /* length caml_max_domains */
+  struct dom_internal* domains[4096]; /* length caml_max_domains */
 } stw_domains = {
   0,
   {0},
 };
-
-Caml_inline struct dom_internal** get_stw_domain_ptr (asize_t index)
-{
-  return domains_table_get((struct domains_table*) &stw_domains.domains,
-                            index, sizeof (struct dom_internal*));
-}
 
 static void add_to_stw_domains(dom_internal* dom) {
   int i;
   dom_internal** p;
 
   CAMLassert(stw_domains.participating_domains < caml_max_domains);
-  for(i=stw_domains.participating_domains; *get_stw_domain_ptr(i)!=dom; ++i) {
+  for(i=stw_domains.participating_domains; stw_domains.domains[i]!=dom; ++i) {
     CAMLassert(i<caml_max_domains);
   }
 
   /* swap passed domain with domain at stw_domains.participating_domains */
-  p = get_stw_domain_ptr(stw_domains.participating_domains);
+  p = &stw_domains.domains[stw_domains.participating_domains];
   dom = *p;
-  *p = *get_stw_domain_ptr(i);
-  *get_stw_domain_ptr(i) = dom;
+  *p = stw_domains.domains[i];
+  stw_domains.domains[i] = dom;
   stw_domains.participating_domains++;
 }
 
 static void remove_from_stw_domains(dom_internal* dom) {
   int i;
-  dom_internal** p;
 
-  for(i=0; *get_stw_domain_ptr(i)!=dom; ++i) {
+  for(i=0; stw_domains.domains[i]!=dom; ++i) {
     CAMLassert(i<caml_max_domains);
   }
   CAMLassert(i < stw_domains.participating_domains);
 
   /* swap passed domain to first free domain */
   stw_domains.participating_domains--;
-  p = get_stw_domain_ptr(stw_domains.participating_domains);
-  *get_stw_domain_ptr(i) = *p;
-  *p = dom;
+  stw_domains.domains[i] = stw_domains.domains[stw_domains.participating_domains];
+  stw_domains.domains[stw_domains.participating_domains] = dom;
 }
 
 static dom_internal* next_free_domain() {
@@ -282,7 +258,7 @@ static dom_internal* next_free_domain() {
    increase caml_max_domains and make more space */
 
   CAMLassert(stw_domains.participating_domains < caml_max_domains);
-  return *get_stw_domain_ptr(stw_domains.participating_domains);
+  return stw_domains.domains[stw_domains.participating_domains];
 }
 
 #ifdef __APPLE__
@@ -424,7 +400,7 @@ int caml_allocate_minor_heap(asize_t wsize) {
   
   wsize = caml_norm_minor_heap_size(wsize);
 
-  if (wsize > caml_minor_heap_max_wsz) wsize = atomic_load(&caml_minor_heap_max_wsz);
+  if (wsize > caml_minor_heap_max_wsz) wsize = caml_minor_heap_max_wsz;
 
   caml_gc_message (0x20, "trying to allocate minor heap: %"
                      ARCH_SIZET_PRINTF_FORMAT "uk words\n", wsize / 1024);
@@ -709,9 +685,11 @@ static void caml_stw_resize_minor_heap_and_update_max_domains(
     reserve_minor_heaps(size);
     CAML_EV_END(EV_DOMAIN_RESIZE_HEAP_RESERVATION);
 
+/*
     CAML_EV_BEGIN(EV_DOMAIN_CHANGE_MAX_DOMAINS);
     caml_grow_per_domain_tables(atomic_load(&caml_max_domains));
     CAML_EV_END(EV_DOMAIN_CHANGE_MAX_DOMAINS);
+  */
   }
   
   caml_global_barrier_end(b);
@@ -722,19 +700,26 @@ static void caml_stw_resize_minor_heap_and_update_max_domains(
 void caml_update_minor_heap_max_and_max_domains(uintnat minor_heap_wsz,
         uintnat max_domains) {
   int changed;
+
+  if (max_domains > 4096) {
+    caml_fatal_error("max domains cannot exceed 4096");
+  }
+
   // FIXME: unclear if we are breaking invariants by updating these values
   // here already
-  if(minor_heap_wsz > atomic_load(&caml_minor_heap_max_wsz)) {
-    atomic_store(&caml_minor_heap_max_wsz, minor_heap_wsz);
+  if(minor_heap_wsz > caml_minor_heap_max_wsz) {
+    caml_minor_heap_max_wsz = minor_heap_wsz;
     changed = 1;
   };
   
-  if (max_domains > atomic_load(&caml_max_domains)) {
-    atomic_store(&caml_max_domains, max_domains);
+  if (max_domains > caml_max_domains) {
+    caml_max_domains = max_domains;
     changed = 1;
   }
 
   if (changed) {
+    caml_gc_message (0x20, "Entering STW for changing minor heap reservation or max domains\n");
+
     caml_try_run_on_all_domains(
       &caml_stw_resize_minor_heap_and_update_max_domains, NULL, 0);
   }
@@ -754,28 +739,12 @@ void caml_init_domains() {
   // - stw_request
   // - stw_domains
   // TODO: what to do about all_domains?
-  if (stw_request.participating.base == NULL) {
-    caml_create_per_domain_table(
-      (struct domains_table *) &stw_request.participating,
-      sizeof (struct caml_domain_state*), "stw_request.participating");
-  }
-  
-  if (all_domains.base == NULL) {
-    caml_create_per_domain_table(
-      (struct domains_table *) &all_domains,
-      sizeof (struct dom_internal), "all_domains");
-  }
-  if (stw_domains.domains.base == NULL) {
-    caml_create_per_domain_table(
-      (struct domains_table *) &stw_domains.domains,
-      sizeof (struct dom_internal*), "stw_domains.domains");
-  }
 
   for (i = 0; i < caml_max_domains; i++) {
-    struct dom_internal* dom = get_domain(i);
+    struct dom_internal* dom = &all_domains[i];
     uintnat domain_minor_heap_base;
 
-    *get_stw_domain_ptr(i) = dom;
+    stw_domains.domains[i] = dom;
 
     dom->id = i;
 
@@ -812,7 +781,7 @@ void caml_init_domains() {
 
 void caml_init_domain_self(int domain_id) {
   CAMLassert (domain_id >= 0 && domain_id < caml_max_domains);
-  domain_self = get_domain(domain_id);
+  domain_self = &all_domains[domain_id];
   SET_Caml_state(domain_self->state);
 }
 
@@ -1206,7 +1175,7 @@ static void stw_handler(caml_domain_state* domain)
       domain,
       stw_request.data,
       stw_request.num_domains,
-      stw_request.participating.base);
+      stw_request.participating);
   #ifdef DEBUG
   Caml_state->inside_stw_handler = 0;
   #endif
@@ -1281,7 +1250,7 @@ int caml_try_run_on_all_domains_with_spin_work(
   {
     int domains_participating = 0;
     for(i=0; i<caml_max_domains; i++) {
-      if(get_domain(i)->interruptor.running)
+      if(all_domains[i].interruptor.running)
         domains_participating++;
     }
     CAMLassert(domains_participating == stw_domains.participating_domains);
@@ -1291,10 +1260,10 @@ int caml_try_run_on_all_domains_with_spin_work(
 
   /* Next, interrupt all domains */
   for(i = 0; i < stw_domains.participating_domains; i++) {
-    caml_domain_state* d = (*get_stw_domain_ptr(i))->state;
-    *get_stw_participating_domain_ptr(i) = d;
+    caml_domain_state* d = stw_domains.domains[i]->state;
+    stw_request.participating[i] = d;
     if (d != domain_state) {
-      caml_send_interrupt(&(*get_stw_domain_ptr(i))->interruptor);
+      caml_send_interrupt(&stw_domains.domains[i]->interruptor);
     } else {
       CAMLassert(!domain_self->interruptor.interrupt_pending);
     }
@@ -1304,8 +1273,8 @@ int caml_try_run_on_all_domains_with_spin_work(
   caml_plat_unlock(&all_domains_lock);
 
   for(i = 0; i < stw_request.num_domains; i++) {
-    int id = (*get_stw_participating_domain_ptr(i))->id;
-    caml_wait_interrupt_serviced(&get_domain(id)->interruptor);
+    int id = stw_request.participating[i]->id;
+    caml_wait_interrupt_serviced(&all_domains[id].interruptor);
   }
 
   /* release from the enter barrier */
@@ -1315,7 +1284,7 @@ int caml_try_run_on_all_domains_with_spin_work(
   domain_state->inside_stw_handler = 1;
   #endif
   handler(domain_state, data,
-          stw_request.num_domains, stw_request.participating.base);
+          stw_request.num_domains, stw_request.participating);
   #ifdef DEBUG
   domain_state->inside_stw_handler = 0;
   #endif

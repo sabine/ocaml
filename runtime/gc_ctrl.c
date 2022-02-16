@@ -52,7 +52,7 @@ extern uintnat caml_custom_minor_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_max_bsz; /* see custom.c */
 extern atomic_uintnat caml_max_domains; /* see domain.c */
 extern atomic_uintnat caml_minor_heap_max_wsz; /* see domain.c */
-extern struct sampled_gc_stats_table caml_sampled_gc_stats; /* see major_gc.c */
+extern struct gc_stats caml_sampled_gc_stats[4096]; /* see major_gc.c */
 
 CAMLprim value caml_gc_quick_stat(value v)
 {
@@ -313,10 +313,6 @@ void caml_init_gc (void)
 {
   caml_max_domains = caml_params->max_domains;
   caml_minor_heap_max_wsz = caml_params->init_minor_heap_wsz;
-
-  caml_create_per_domain_table(
-      (struct domains_table *) &caml_sampled_gc_stats,
-      sizeof (struct gc_stats), "caml_sampled_gc_stats");
 
   caml_max_stack_size = caml_params->init_max_stack_wsz;
   caml_fiber_wsz = (Stack_threshold * 2) / sizeof(value);

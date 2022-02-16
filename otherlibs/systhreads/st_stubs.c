@@ -104,32 +104,34 @@ struct caml_thread_table {
 };
 
 /* thread_table instance, up to caml_max_domains */
-struct thread_table CAML_DOMAINS_TABLE_STRUCT(struct caml_thread_table);
-static struct thread_table thread_table;
+static struct caml_thread_table thread_table[4096];// CAML_DOMAINS_TABLE_STRUCT(struct caml_thread_table);
+//static struct thread_table thread_table;
+/*
 Caml_inline struct caml_thread_table* get_thread_table (asize_t index)
 {
   return domains_table_get((struct domains_table*) &thread_table,
                             index, sizeof (struct caml_thread_table));
 }
+*/
 
 /* the "head" of the circular list of thread descriptors for this domain */
-#define All_threads get_thread_table(Caml_state->id)->all_threads
+#define All_threads thread_table[Caml_state->id].all_threads
 
 /* The descriptor for the currently executing thread for this domain */
-#define Current_thread get_thread_table(Caml_state->id)->current_thread
+#define Current_thread thread_table[Caml_state->id].current_thread
 
 /* The master lock protecting this domain's thread chaining */
-#define Thread_main_lock get_thread_table(Caml_state->id)->thread_lock
+#define Thread_main_lock thread_table[Caml_state->id].thread_lock
 
 /* Whether the "tick" thread is already running for this domain */
-#define Tick_thread_running get_thread_table(Caml_state->id)->tick_thread_running
+#define Tick_thread_running thread_table[Caml_state->id].tick_thread_running
 
 /* The thread identifier of the "tick" thread for this domain */
-#define Tick_thread_id get_thread_table(Caml_state->id)->tick_thread_id
+#define Tick_thread_id thread_table[Caml_state->id].tick_thread_id
 
 /* The key used for storing the thread descriptor in the specific data
    of the corresponding system thread. */
-#define Thread_key get_thread_table(Caml_state->id)->thread_key
+#define Thread_key thread_table[Caml_state->id].thread_key
 
 /* Identifier for next thread creation */
 static atomic_uintnat thread_next_id = 0;
@@ -377,11 +379,6 @@ CAMLprim value caml_thread_initialize_domain(value v)
 
   /* OS-specific initialization */
   st_initialize(caml_max_domains);
-
-  if (thread_table.base == NULL) {
-    caml_create_per_domain_table((struct domains_table *) &thread_table,
-                       sizeof (struct caml_thread_table), "thread_table");
-  }
 
   st_masterlock_init(&Thread_main_lock);
 
