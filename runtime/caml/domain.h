@@ -27,7 +27,6 @@ extern "C" {
 #include "mlvalues.h"
 #include "domain_state.h"
 #include "platform.h"
-#include "domains_table.h"
 
 #define Caml_check_gc_interrupt(dom_st)   \
   (CAMLalloc_point_here, \
@@ -64,8 +63,8 @@ CAMLextern void (*caml_domain_external_interrupt_hook)(void);
 CAMLextern void caml_init_domains();
 CAMLextern void caml_init_domain_self(int);
 
-CAMLextern atomic_uintnat caml_max_domains;
-CAMLextern atomic_uintnat caml_minor_heap_max_wsz;
+CAMLextern uintnat caml_max_domains;
+CAMLextern uintnat caml_minor_heap_max_wsz;
 
 CAMLextern atomic_uintnat caml_num_domains_running;
 CAMLextern uintnat caml_minor_heaps_base;

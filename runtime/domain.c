@@ -31,7 +31,6 @@
 #include "caml/fail.h"
 #include "caml/fiber.h"
 #include "caml/finalise.h"
-#include "caml/domains_table.h"
 #include "caml/gc_ctrl.h"
 #include "caml/globroots.h"
 #include "caml/intext.h"
@@ -45,7 +44,6 @@
 #include "caml/startup.h"
 #include "caml/sync.h"
 #include "caml/weak.h"
-
 
 /* From a runtime perspective, domains must handle stop-the-world (STW)
    sections, during which:
@@ -141,6 +139,7 @@ struct dom_internal {
 };
 typedef struct dom_internal dom_internal;
 
+
 static struct {
   atomic_uintnat domains_still_running;
   atomic_uintnat num_domains_still_processing;
@@ -156,8 +155,7 @@ static struct {
   int num_domains;
   atomic_uintnat barrier;
 
-  /* length caml_max_domains */
-  caml_domain_state* participating[4096];
+  caml_domain_state* participating[Hard_max_domains];
 } stw_request = {
   ATOMIC_UINTNAT_INIT(0),
   ATOMIC_UINTNAT_INIT(0),
@@ -167,24 +165,23 @@ static struct {
   NULL,
   0,
   ATOMIC_UINTNAT_INIT(0),
-  {0},
+  { 0 },
 };
 
 static caml_plat_mutex all_domains_lock = CAML_PLAT_MUTEX_INITIALIZER;
 static caml_plat_cond all_domains_cond =
     CAML_PLAT_COND_INITIALIZER(&all_domains_lock);
 static atomic_uintnat /* dom_internal* */ stw_leader = 0;
-
-static struct dom_internal all_domains[4096];
+static struct dom_internal all_domains[Hard_max_domains];
 
 CAMLexport atomic_uintnat caml_num_domains_running;
 
 
 
 /* maximum number of domains */
-atomic_uintnat caml_max_domains;
+uintnat caml_max_domains;
 /* size of the virtual memory reservation for the minor heap, per domain */
-atomic_uintnat caml_minor_heap_max_wsz;
+uintnat caml_minor_heap_max_wsz;
 /*
   The amount of memory reserved for all minor heaps of all domains is
   caml_max_domains * caml_minor_heap_max_wsz. Individual domains can allocate
@@ -210,19 +207,18 @@ static __thread dom_internal* domain_self;
 /*
  * This structure is protected by all_domains_lock
  * [0, participating_domains) are all the domains taking part in STW sections
- * [participating_domains, max_domains) are all those domains free to be used
+ * [participating_domains, Max_domains) are all those domains free to be used
  */
 static struct {
   int participating_domains;
-  struct dom_internal* domains[4096]; /* length caml_max_domains */
+  dom_internal* domains[Hard_max_domains];
 } stw_domains = {
   0,
-  {0},
+  { 0 },
 };
 
 static void add_to_stw_domains(dom_internal* dom) {
   int i;
-  dom_internal** p;
 
   CAMLassert(stw_domains.participating_domains < caml_max_domains);
   for(i=stw_domains.participating_domains; stw_domains.domains[i]!=dom; ++i) {
@@ -230,9 +226,8 @@ static void add_to_stw_domains(dom_internal* dom) {
   }
 
   /* swap passed domain with domain at stw_domains.participating_domains */
-  p = &stw_domains.domains[stw_domains.participating_domains];
-  dom = *p;
-  *p = stw_domains.domains[i];
+  dom = stw_domains.domains[stw_domains.participating_domains];
+  stw_domains.domains[stw_domains.participating_domains] = stw_domains.domains[i];
   stw_domains.domains[i] = dom;
   stw_domains.participating_domains++;
 }
@@ -674,8 +669,12 @@ static void caml_stw_resize_minor_heap_and_update_max_domains(
 
   caml_empty_minor_heap_no_major_slice_from_stw(domain, unused,
                                             participating_count, participating);
-  
+
   caml_free_minor_heap();
+
+  // TODO: look at how exactly single domain resizes their heap on Gc.set
+  // there is more code before and after a resize that might be necessary
+  // to use here in order to avoid minor heap corruption
 
   b = caml_global_barrier_begin ();
   if (caml_global_barrier_is_final(b)) {
@@ -684,12 +683,6 @@ static void caml_stw_resize_minor_heap_and_update_max_domains(
     size = get_minor_heap_reservation_size();
     reserve_minor_heaps(size);
     CAML_EV_END(EV_DOMAIN_RESIZE_HEAP_RESERVATION);
-
-/*
-    CAML_EV_BEGIN(EV_DOMAIN_CHANGE_MAX_DOMAINS);
-    caml_grow_per_domain_tables(atomic_load(&caml_max_domains));
-    CAML_EV_END(EV_DOMAIN_CHANGE_MAX_DOMAINS);
-  */
   }
   
   caml_global_barrier_end(b);

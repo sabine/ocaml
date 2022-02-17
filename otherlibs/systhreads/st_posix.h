@@ -32,13 +32,13 @@
 
 typedef int st_retcode;
 
-/* Variables used to stop "tick" threads, length caml_max_domains */
-static atomic_uintnat tick_thread_stop[4096];
-#define Tick_thread_stop (tick_thread_stop[Caml_state->id])
+/* Variables used to stop "tick" threads */
+static atomic_uintnat tick_thread_stop[Hard_max_domains];
+#define Tick_thread_stop tick_thread_stop[Caml_state->id]
 
 /* OS-specific initialization */
 
-static int st_initialize(uintnat max_domains)
+static int st_initialize(void)
 {
   atomic_store_rel(&Tick_thread_stop, 0);
   return 0;

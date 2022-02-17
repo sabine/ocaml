@@ -38,7 +38,7 @@
    ; matches the line structure of files in Makefile/BYTECODE_C_SOURCES
    interp.c misc.c fix_code.c startup_aux.c startup_byt.c freelist.c
      major_gc.c
-   minor_gc.c memory.c alloc.c roots_byt.c domains_table.c globroots.c
+   minor_gc.c memory.c alloc.c roots_byt.c globroots.c
      fail_byt.c signals.c
    signals_byt.c printexc.c backtrace_byt.c backtrace.c compare.c ints.c
      eventlog.c

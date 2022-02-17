@@ -18,7 +18,6 @@
 #include "caml/alloc.h"
 #include "caml/custom.h"
 #include "caml/finalise.h"
-#include "caml/domains_table.h"
 #include "caml/gc.h"
 #include "caml/gc_ctrl.h"
 #include "caml/major_gc.h"
@@ -39,7 +38,6 @@
 #include "caml/eventlog.h"
 #include "caml/fail.h"
 
-
 uintnat caml_max_stack_size;
 uintnat caml_fiber_wsz;
 
@@ -50,9 +48,8 @@ extern uintnat caml_allocation_policy;    /*        see freelist.c */
 extern uintnat caml_custom_major_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_ratio;   /* see custom.c */
 extern uintnat caml_custom_minor_max_bsz; /* see custom.c */
-extern atomic_uintnat caml_max_domains; /* see domain.c */
-extern atomic_uintnat caml_minor_heap_max_wsz; /* see domain.c */
-extern struct gc_stats caml_sampled_gc_stats[4096]; /* see major_gc.c */
+extern uintnat caml_max_domains; /* see domain.c */
+extern uintnat caml_minor_heap_max_wsz; /* see domain.c */
 
 CAMLprim value caml_gc_quick_stat(value v)
 {

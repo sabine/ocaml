@@ -241,6 +241,9 @@ typedef uint64_t uintnat;
 /* Maximum number of domains */
 #define Max_domains_def 128
 
+/* Hard maximum of domains */
+#define Hard_max_domains 4096
+
 /* Default setting for the major GC slice smoothing window: 1
    (i.e. no smoothing)
 */

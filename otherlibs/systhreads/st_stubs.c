@@ -30,7 +30,6 @@
 #include "caml/printexc.h"
 #include "caml/roots.h"
 #include "caml/signals.h"
-#include "caml/startup.h"
 #include "caml/sync.h"
 #include "caml/sys.h"
 #include "caml/memprof.h"
@@ -104,15 +103,7 @@ struct caml_thread_table {
 };
 
 /* thread_table instance, up to caml_max_domains */
-static struct caml_thread_table thread_table[4096];// CAML_DOMAINS_TABLE_STRUCT(struct caml_thread_table);
-//static struct thread_table thread_table;
-/*
-Caml_inline struct caml_thread_table* get_thread_table (asize_t index)
-{
-  return domains_table_get((struct domains_table*) &thread_table,
-                            index, sizeof (struct caml_thread_table));
-}
-*/
+static struct caml_thread_table thread_table[Hard_max_domains];
 
 /* the "head" of the circular list of thread descriptors for this domain */
 #define All_threads thread_table[Caml_state->id].all_threads
@@ -378,7 +369,7 @@ CAMLprim value caml_thread_initialize_domain(value v)
   caml_thread_t new_thread;
 
   /* OS-specific initialization */
-  st_initialize(caml_max_domains);
+  st_initialize();
 
   st_masterlock_init(&Thread_main_lock);
 

@@ -86,7 +86,6 @@ typedef enum {
     EV_MINOR_LOCAL_ROOTS_PROMOTE,
     EV_DOMAIN_CONDITION_WAIT,
     EV_DOMAIN_RESIZE_HEAP_RESERVATION,
-    EV_DOMAIN_CHANGE_MAX_DOMAINS,
 } ev_gc_phase;
 
 typedef enum {

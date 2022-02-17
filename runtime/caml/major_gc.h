@@ -18,8 +18,6 @@
 
 #ifdef CAML_INTERNALS
 
-#include "domains_table.h"
-
 typedef enum {
   Phase_sweep_and_mark_main,
   Phase_mark_final,
@@ -85,7 +83,6 @@ struct gc_stats {
   uint64_t forced_major_collections;
   struct heap_stats major_heap;
 };
-extern struct gc_stats caml_sampled_gc_stats[4096];
 
 void caml_sample_gc_stats(struct gc_stats* buf);
 void caml_sample_gc_collect(caml_domain_state *domain);
