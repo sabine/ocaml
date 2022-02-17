@@ -203,7 +203,6 @@ CAMLexport uintnat caml_minor_heaps_base;
 CAMLexport uintnat caml_minor_heaps_end;
 static __thread dom_internal* domain_self;
 
-
 /*
  * This structure is protected by all_domains_lock
  * [0, participating_domains) are all the domains taking part in STW sections
@@ -214,12 +213,11 @@ static struct {
   dom_internal* domains[Hard_max_domains];
 } stw_domains = {
   0,
-  { 0 },
+  { 0 }
 };
 
 static void add_to_stw_domains(dom_internal* dom) {
   int i;
-
   CAMLassert(stw_domains.participating_domains < caml_max_domains);
   for(i=stw_domains.participating_domains; stw_domains.domains[i]!=dom; ++i) {
     CAMLassert(i<caml_max_domains);
@@ -227,7 +225,8 @@ static void add_to_stw_domains(dom_internal* dom) {
 
   /* swap passed domain with domain at stw_domains.participating_domains */
   dom = stw_domains.domains[stw_domains.participating_domains];
-  stw_domains.domains[stw_domains.participating_domains] = stw_domains.domains[i];
+  stw_domains.domains[stw_domains.participating_domains] = 
+      stw_domains.domains[i];
   stw_domains.domains[i] = dom;
   stw_domains.participating_domains++;
 }
@@ -242,7 +241,8 @@ static void remove_from_stw_domains(dom_internal* dom) {
 
   /* swap passed domain to first free domain */
   stw_domains.participating_domains--;
-  stw_domains.domains[i] = stw_domains.domains[stw_domains.participating_domains];
+  stw_domains.domains[i] =
+      stw_domains.domains[stw_domains.participating_domains];
   stw_domains.domains[stw_domains.participating_domains] = dom;
 }
 
@@ -370,11 +370,11 @@ asize_t caml_norm_minor_heap_size (intnat wsize)
 
 void caml_free_minor_heap() {
   caml_domain_state* domain_state = Caml_state;
-
   CAMLassert(domain_state->young_ptr == domain_state->young_end);
 
   caml_gc_message (0x20, "trying to free old minor heap: %"
-                     ARCH_SIZET_PRINTF_FORMAT "uk words\n", domain_state->minor_heap_wsz / 1024);
+        ARCH_SIZET_PRINTF_FORMAT "uk words\n",
+        domain_state->minor_heap_wsz / 1024);
 
   /* free old minor heap.
      instead of unmapping the heap, we decommit it, so there's
@@ -997,7 +997,7 @@ static void* domain_thread_func(void* v)
     caml_mutex_unlock(terminate_mutex);
     free_domain_ml_values(ml_values);
   } else {
-    caml_gc_log("Failed to create domain.");
+    caml_gc_log("Failed to create domain");
   }
   return 0;
 }
@@ -1041,7 +1041,7 @@ CAMLprim value caml_domain_spawn(value callback, value mutex)
 #endif
 
   if (err) {
-    caml_failwith("failed to create domain thread.");
+    caml_failwith("failed to create domain thread");
   }
 
   /* While waiting for the child thread to start up, we need to service any

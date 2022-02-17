@@ -83,7 +83,6 @@ struct gc_stats {
   uint64_t forced_major_collections;
   struct heap_stats major_heap;
 };
-
 void caml_sample_gc_stats(struct gc_stats* buf);
 void caml_sample_gc_collect(caml_domain_state *domain);
 
