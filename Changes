@@ -54,6 +54,16 @@ Working version
 - #10802: Use 4.12 value macros and helpers in C code
   (Antonin Décimo, review by Gabriel Scherer)
 
+- #11082 The runtime now reserves only minor_heap_wsz words of
+  memory per domain for the minor heap area (down from 2GB per domain).
+  Calling Gc.set asking for a larger minor heap than the current
+  reservation will un-reserve and re-reserve the minor heap area
+  of all domains. Gc.set changes the minor heap size only for
+  the current domain.
+  Tools like AFL or Valgrind can now be used on compiled programs.
+  (Sabine Schmaltz, Gabriel Scherer, KC Sivaramakrishnan, review by
+   Enguerrand Decorne, Armaël Guéneau, Jacques-Henri Jourdan, ??)
+
 ### Code generation and optimizations:
 
 - #10972: ARM64 multicore support: OCaml & C stack separation;
