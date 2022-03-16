@@ -815,9 +815,14 @@ static void caml_stw_resize_minor_heap_reservation(caml_domain_state* domain,
   /* Note: each domain allocates its own minor heap. This seems
      important to get good NUMA behavior. We don't want a single
      domain to allocate all minor heaps, which could create locality
-     issues we don't understand very well. */
-  if (caml_allocate_minor_heap(Caml_state->minor_heap_wsz) < 0) {
-    caml_fatal_error("Fatal error: No memory for minor heap");
+     issues we don't understand very well.
+     
+     The domain who initiated the STW section allocates its minor
+     heap in caml_set_minor_heap_size. */
+  if (((dom_internal *) atomic_load_acq(&stw_leader))->state != Caml_state) {
+    if (caml_allocate_minor_heap(Caml_state->minor_heap_wsz) < 0) {
+      caml_fatal_error("Fatal error: No memory for minor heap");
+    }
   }
 }
 

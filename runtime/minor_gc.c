@@ -124,10 +124,35 @@ void caml_set_minor_heap_size (asize_t wsize)
   caml_domain_state* domain_state = Caml_state;
   struct caml_minor_tables *r = domain_state->minor_tables;
 
-  if (domain_state->young_ptr != domain_state->young_end)
-    caml_minor_collection();
+  if (wsize != domain_state->minor_heap_wsz) {
+    caml_gc_log ("current minor heap size: %"
+                ARCH_SIZET_PRINTF_FORMAT "uk words",
+                domain_state->minor_heap_wsz / 1024);
+    caml_gc_log ("set minor heap size: %"
+                ARCH_SIZET_PRINTF_FORMAT "uk words", wsize / 1024);
+  }
 
-  if(caml_reallocate_minor_heap(wsize) < 0) {
+  if (wsize <= caml_minor_heap_max_wsz) {
+    if (domain_state->young_ptr != domain_state->young_end ) {
+      caml_minor_collection();
+    }
+    /* If we are not going to resize the minor heap reservation,
+      we (possibly) need to do a minor collection and free this domain's
+      minor heap.
+
+      In the case where we resize the minor heap reservation, the
+      STW section called from caml_update_minor_heap_max includes
+      a minor collection and also frees the minor heap of this domain.
+    */
+    caml_free_minor_heap();
+  } else {
+    caml_gc_log ("update minor heap max: %"
+                 ARCH_SIZET_PRINTF_FORMAT "uk words", wsize / 1024);
+    caml_update_minor_heap_max(wsize);
+  }
+  CAMLassert(wsize <= caml_minor_heap_max_wsz);
+
+  if(caml_allocate_minor_heap(wsize) < 0) {
     caml_fatal_error("Fatal error: No memory for minor heap");
   }
 

@@ -203,23 +203,7 @@ CAMLprim value caml_gc_set(value v)
   if (newminwsz != Caml_state->minor_heap_wsz) {
     caml_gc_message (0x20, "New minor heap size: %"
                      ARCH_INTNAT_PRINTF_FORMAT "uk words\n", newminwsz / 1024);
-  }
 
-  if (newminwsz > caml_minor_heap_max_wsz) {
-    caml_gc_log ("update minor heap max: %"
-                 ARCH_SIZET_PRINTF_FORMAT "uk words", newminwsz / 1024);
-    caml_update_minor_heap_max(newminwsz);
-  }
-  CAMLassert(newminwsz <= caml_minor_heap_max_wsz);
-  if (newminwsz != Caml_state->minor_heap_wsz) {
-    caml_gc_log ("current minor heap size: %"
-                 ARCH_SIZET_PRINTF_FORMAT "uk words",
-                 Caml_state->minor_heap_wsz / 1024);
-    caml_gc_log ("set minor heap size: %"
-                 ARCH_SIZET_PRINTF_FORMAT "uk words", newminwsz / 1024);
-    /* FIXME: when (newminwsz > caml_minor_heap_max_wsz) and
-       (newminwsz != Caml_state->minor_heap_wsz) are both true,
-       the current domain reallocates its own minor heap twice. */
     caml_set_minor_heap_size (newminwsz);
   }
 

@@ -36,6 +36,8 @@ extern "C" {
      atomic_load_explicit(&((dom_st)->young_limit), memory_order_relaxed)))
 
 asize_t caml_norm_minor_heap_size (intnat);
+void caml_free_minor_heap();
+int caml_allocate_minor_heap(asize_t);
 int caml_reallocate_minor_heap(asize_t);
 void caml_update_minor_heap_max(uintnat minor_heap_wsz);
 
