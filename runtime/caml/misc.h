@@ -551,6 +551,8 @@ extern int caml_snwprintf(wchar_t * buf,
 #endif
 
 /* platform dependent best-effort thread naming */
+#define MAX_THREAD_NAME_LENGTH 16
+extern void caml_thread_getname(char* name);
 extern void caml_thread_setname(const char* name);
 
 /* Macro used to deactivate thread and address sanitizers on some

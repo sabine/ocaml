@@ -440,6 +440,16 @@ int caml_num_rows_fd(int fd)
 #endif
 }
 
+void caml_thread_getname(char* name)
+{
+  pthread_t self = pthread_self();
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
+  pthread_get_name_np(self, name, MAX_THREAD_NAME_LENGTH);
+#else /* linux glibc/musl or NetBSD or apple */
+  pthread_getname_np(self, name, MAX_THREAD_NAME_LENGTH);
+#endif
+}
+
 void caml_thread_setname(const char* name)
 {
 #if defined(__APPLE__)
