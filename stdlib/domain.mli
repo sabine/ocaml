@@ -60,8 +60,11 @@ val cpu_relax : unit -> unit
 (** If busy-waiting, calling cpu_relax () between iterations
     will improve performance on some CPU architectures *)
 
+val get_name : unit -> string
+(** [get_name] get the domain's name. *)
+
 val set_name : string -> unit
-(** [set_name s] set the domain's thread name to [s]. [s] should not be longer
+(** [set_name s] set the domain's name to [s]. [s] should not be longer
     than 15 characters. If [s] is longer than 15 characters,
     raise Invalid_argument. *)
 

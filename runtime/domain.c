@@ -357,13 +357,30 @@ static void caml_wait_interrupt_serviced(struct interruptor* target)
   }
 }
 
-#define MAX_DOMAIN_NAME_LENGTH 16
-void caml_domain_set_name(char *name)
+static char caml_default_domain_name[MAX_THREAD_NAME_LENGTH] = "";
+
+void caml_domain_set_name(const char *name) {
+  snprintf(Caml_state->name, MAX_THREAD_NAME_LENGTH, "%s", name);
+  if (caml_params->assign_domain_thread_names) {
+    caml_set_domain_thread_name(NULL);
+  }
+}
+
+void caml_set_domain_thread_name(char *suffix)
 {
-  char thread_name[MAX_DOMAIN_NAME_LENGTH];
-  snprintf(thread_name, MAX_DOMAIN_NAME_LENGTH,
-           "%s%d", name, Caml_state->id);
-  caml_thread_setname(thread_name);
+  if (caml_params->assign_domain_thread_names == 2) {
+    char domain_id_suffix[MAX_THREAD_NAME_LENGTH - 1] = "";
+    char thread_name[MAX_THREAD_NAME_LENGTH];
+
+    snprintf(domain_id_suffix, MAX_THREAD_NAME_LENGTH - 1, ":%x%s",
+            Caml_state->unique_id, (suffix ? suffix : ""));
+    snprintf(thread_name, MAX_THREAD_NAME_LENGTH, "%*.*s%s",
+            0, MAX_THREAD_NAME_LENGTH  - 1 - (int)strlen(domain_id_suffix),
+            Caml_state->name, domain_id_suffix);
+    caml_thread_setname(thread_name);
+  } else if (caml_params->assign_domain_thread_names == 1) {
+    caml_thread_setname(Caml_state->name);
+  }
 }
 
 asize_t caml_norm_minor_heap_size (intnat wsize)
@@ -594,6 +611,9 @@ static void create_domain(uintnat initial_minor_heap_wsize) {
   domain_state->id = d->id;
   domain_state->unique_id = d->interruptor.unique_id;
   CAMLassert(!d->interruptor.interrupt_pending);
+  if (domain_state->name == NULL) {
+    domain_state->name = caml_stat_calloc_noexc(1, MAX_THREAD_NAME_LENGTH);
+  }
 
   domain_state->extra_heap_resources = 0.0;
   domain_state->extra_heap_resources_minor = 0.0;
@@ -882,7 +902,18 @@ void caml_init_domains(uintnat minor_heap_wsz) {
   caml_init_signal_handling();
 
   CAML_EVENTLOG_INIT();
-  caml_domain_set_name("Domain");
+
+  if (!strlen(caml_default_domain_name)) {
+#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__linux__)
+    // get the current POSIX thread name as assigned by the operating system
+    // NOTE: this does not work on Windows or MacOS because they don't assign
+    // a POSIX thread name by default.
+    caml_thread_getname(caml_default_domain_name);
+#else
+    snprintf(caml_default_domain_name, MAX_THREAD_NAME_LENGTH, "Domain");
+#endif
+  }
+  caml_domain_set_name(caml_default_domain_name);
 }
 
 void caml_init_domain_self(int domain_id) {
@@ -945,7 +976,9 @@ static void* backup_thread_func(void* v)
   domain_self = di;
   SET_Caml_state((void*)(di->state));
 
-  caml_domain_set_name("Backup");
+  if (caml_params->assign_domain_thread_names) {
+    caml_set_domain_thread_name("B");
+  }
 
   CAML_EVENTLOG_IS_BACKUP_THREAD();
 
@@ -1102,7 +1135,7 @@ static void* domain_thread_func(void* v)
 
     caml_gc_log("Domain starting (unique_id = %"ARCH_INTNAT_PRINTF_FORMAT"u)",
                 domain_self->interruptor.unique_id);
-    caml_domain_set_name("Domain");
+    caml_domain_set_name(caml_default_domain_name);
     caml_callback(ml_values->callback, Val_unit);
     domain_terminate();
     /* Joining domains will lock/unlock the terminate_mutex so this unlock will
@@ -1776,12 +1809,20 @@ CAMLprim value caml_domain_dls_get(value unused)
   return Caml_state->dls_root;
 }
 
+CAMLprim value caml_ml_domain_get_name(value t)
+{
+  CAMLparam0();
+  CAMLlocal1(result);
+  result = caml_copy_string(Caml_state->name);
+  CAMLreturn(result);
+}
+
 CAMLprim value caml_ml_domain_set_name(value name)
 {
   CAMLparam1(name);
 
-  if (caml_string_length(name) >= MAX_DOMAIN_NAME_LENGTH)
+  if (caml_string_length(name) >= MAX_THREAD_NAME_LENGTH)
     caml_invalid_argument("caml_ml_domain_set_name");
-  caml_thread_setname(String_val(name));
+  caml_domain_set_name(String_val(name));
   CAMLreturn(Val_unit);
 }
