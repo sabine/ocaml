@@ -478,7 +478,9 @@ static void * caml_thread_start(void * v)
 
   st_tls_set(Thread_key, th);
 
-  caml_domain_set_name("Domain");
+  if(caml_params->assign_domain_thread_names) {
+    caml_set_domain_thread_name("N");
+  }
 
   st_masterlock_acquire(&Thread_main_lock);
   Current_thread = st_tls_get(Thread_key);
