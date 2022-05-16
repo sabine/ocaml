@@ -1808,8 +1808,3 @@ CAMLprim value caml_domain_dls_get(value unused)
   CAMLnoalloc;
   return Caml_state->dls_root;
 }
-
-CAMLprim value caml_ml_domain_set_name(value a1) {
-  CAMLnoalloc;
-  return Val_unit;
-}
