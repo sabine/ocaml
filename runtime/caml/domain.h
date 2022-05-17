@@ -112,7 +112,8 @@ int caml_global_barrier_num_domains(void);
 
 int caml_domain_is_terminating(void);
 
-CAMLextern void caml_domain_set_name(char*);
+CAMLextern char caml_os_thread_name[MAX_OS_THREAD_NAME_LENGTH];
+CAMLextern void caml_assign_os_thread_name(char*);
 
 #endif /* CAML_INTERNALS */
 

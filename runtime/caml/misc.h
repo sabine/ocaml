@@ -550,8 +550,10 @@ extern int caml_snwprintf(wchar_t * buf,
 #define snprintf_os snprintf
 #endif
 
-/* platform dependent best-effort thread naming */
-extern void caml_thread_setname(const char* name);
+/* platform dependent best-effort OS thread naming */
+#define MAX_OS_THREAD_NAME_LENGTH 16
+extern void caml_os_thread_getname(char* name);
+extern void caml_os_thread_setname(const char* name);
 
 /* Macro used to deactivate thread and address sanitizers on some
    functions. */

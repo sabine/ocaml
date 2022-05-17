@@ -354,13 +354,21 @@ static void caml_wait_interrupt_serviced(struct interruptor* target)
   }
 }
 
-#define MAX_DOMAIN_NAME_LENGTH 16
-void caml_domain_set_name(char *name)
+char caml_os_thread_name[MAX_OS_THREAD_NAME_LENGTH] = "";
+
+inline void caml_assign_os_thread_name(char *suffix)
 {
-  char thread_name[MAX_DOMAIN_NAME_LENGTH];
-  snprintf(thread_name, MAX_DOMAIN_NAME_LENGTH,
-           "%s%d", name, Caml_state->id);
-  caml_thread_setname(thread_name);
+  if (caml_params->assign_os_thread_names) {
+    char domain_id_suffix[MAX_OS_THREAD_NAME_LENGTH - 1] = "";
+    char thread_name[MAX_OS_THREAD_NAME_LENGTH];
+
+    snprintf(domain_id_suffix, MAX_OS_THREAD_NAME_LENGTH - 1, ":%x%s",
+            Caml_state->unique_id, (suffix ? suffix : ""));
+    snprintf(thread_name, MAX_OS_THREAD_NAME_LENGTH, "%*.*s%s",
+            0, MAX_OS_THREAD_NAME_LENGTH  - 1 - (int)strlen(domain_id_suffix),
+            caml_os_thread_name, domain_id_suffix);
+    caml_os_thread_setname(thread_name);
+  }
 }
 
 asize_t caml_norm_minor_heap_size (intnat wsize)
@@ -880,7 +888,17 @@ void caml_init_domains(uintnat minor_heap_wsz) {
   caml_init_signal_handling();
 
   CAML_EVENTLOG_INIT();
-  caml_domain_set_name("Domain");
+  if (!strlen(caml_os_thread_name)) {
+#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__linux__)
+    // get the current POSIX thread name as assigned by the operating system
+    // NOTE: this does not work on Windows or MacOS because they don't assign
+    // a POSIX thread name by default.
+    caml_os_thread_getname(caml_os_thread_name);
+#else
+    snprintf(caml_os_thread_name, MAX_OS_THREAD_NAME_LENGTH, "Domain");
+#endif
+  }
+  caml_assign_os_thread_name("");
 }
 
 void caml_init_domain_self(int domain_id) {
@@ -949,7 +967,7 @@ static void* backup_thread_func(void* v)
   domain_self = di;
   SET_Caml_state((void*)(di->state));
 
-  caml_domain_set_name("Backup");
+  caml_assign_os_thread_name("B");
 
   CAML_EVENTLOG_IS_BACKUP_THREAD();
 
@@ -1085,7 +1103,7 @@ static void* domain_thread_func(void* v)
 
     caml_gc_log("Domain starting (unique_id = %"ARCH_INTNAT_PRINTF_FORMAT"u)",
                 domain_self->interruptor.unique_id);
-    caml_domain_set_name("Domain");
+    caml_assign_os_thread_name("");
     caml_callback(ml_values->callback, Val_unit);
     domain_terminate();
 
@@ -1774,4 +1792,10 @@ CAMLprim value caml_domain_dls_get(value unused)
 {
   CAMLnoalloc;
   return Caml_state->dls_root;
+}
+
+CAMLprim value caml_ml_domain_set_name(value unused)
+{
+  CAMLnoalloc;
+  return Val_unit;
 }
