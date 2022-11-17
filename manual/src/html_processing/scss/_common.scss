@@ -2,8 +2,13 @@
 
 // set this to true for integration into the ocaml.org wesite
 $ocamlorg:false;
-/* ocaml logo color */
-$logocolor:#ec6a0d;
+
+/* colors */
+$primary_color:#cb4f0e;
+$primary_color_subtle:#ff813f;
+$nav_background: rgb(250, 248, 243);
+$light_background_color: rgb(243, 244, 246);
+
 $logo_height:67px;
 
 @if $ocamlorg {
@@ -15,13 +20,10 @@ $logo_height:67px;
 
 
 /* Fonts */
-@import url(https://fonts.googleapis.com/css?family=Fira+Mono:400,500);
-@import url(https://fonts.googleapis.com/css?family=Noticia+Text:400,400i,700);
-@import url(https://fonts.googleapis.com/css?family=Fira+Sans:400,400i,500,500i,600,600i,700,700i);
 
-$font-sans: "Fira Sans", Helvetica, Arial, sans-serif;
-$font-mono: "Fira Mono", courier, monospace;
-$font-serif: "Noticia Text", Georgia, serif;
+$font-sans: Inter, sans-serif;
+$font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+$font-serif: Inter, sans-serif;
 
 /* Reset */
 .pre,a,b,body,code,div,em,form,h1,h2,h3,h4,h5,h6,header,html,i,img,li,mark,menu,nav,object,output,p,pre,s,section,span,time,ul,td,var{
@@ -110,7 +112,7 @@ html {
     max-width:30ex;
     min-width:26ex;
     width:20%;
-    background:linear-gradient(to left,#ccc,transparent);
+    background:$nav_background;
     overflow:auto;
     color:#1F2D3D;
     padding-left:2ex;
@@ -135,22 +137,22 @@ html {
 		padding-left:12px;
 	    }
 	    a {
-		font-family: $font-sans;
-		font-size:.95em;
-		color:#333;
-		font-weight:400;
-		line-height:1.6em;
-		display:block;
-		&:hover {
-		    box-shadow:none;
-		    background-color: #edbf84;}
+            font-family: $font-sans;
+            font-size:.95rem;
+            color:#333;
+            font-weight:400;
+            line-height:1.6em;
+            display:block;
+            transition: color 0.2s ease-in-out;
+            &:hover {
+                color: $primary_color;
+            }
 	    }
 	    &.top a {
-		color: #848484;
-		&:hover {
-		    background-color: unset;
-		    text-decoration: underline;
-		}
+            color: #848484;
+            &:hover {
+                text-decoration: underline;
+            }
 	    }
 	}
     }
@@ -199,7 +201,7 @@ html {
     margin-bottom:0;
     position:fixed;
     left:-10000px; /* initially hidden */
-    background-color:#ffefe7;
+    background-color:$nav_background;
     transition:left 0.4s;
     top:0;
     max-width:calc(100% - 2em);
@@ -243,7 +245,7 @@ html {
 
 @mixin caret {
     content:"▶";
-    color:$logocolor;
+    color:$primary_color;
     font-size:smaller;
     margin-right:4px;
     margin-left:-1em
@@ -251,15 +253,20 @@ html {
 
 @mixin colored-disc-marker {
     list-style-type: disc;
-    li::marker { color:$logocolor; }
+    li::marker { color:$primary_color; }
 }
 
 @mixin diamond {
     content:"◆";
-    color:$logocolor;
+    color:$primary_color;
     margin-right:4px;
     margin-left:-1em;
     font-family: $font-sans;
     font-size:14px;
     vertical-align:1px;
+}
+
+@mixin declaration {
+    border-left: 4px solid $primary_color_subtle;
+	background: $light_background_color 100%;
 }
