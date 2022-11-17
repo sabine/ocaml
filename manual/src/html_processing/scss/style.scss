@@ -22,6 +22,9 @@
     td.module,
     td:first-child {
 	width: 33%;
+	& > a {
+		padding: 0.2em;
+	}
     }
     td:nth-child(2) {
 	width: 65%;
@@ -51,7 +54,6 @@
 	    background: rgb(228, 217, 211);
 	}
 	/* must be same as <pre>: */
-	background: linear-gradient(to left, white 0%, rgb(237, 232, 229) 100%);
 	width: 100%;
 	td {
 	    padding-left: 1ex;
@@ -68,6 +70,7 @@
 	width: 100%;
 	word-break: normal;
 	box-shadow: none;
+	@include declaration;
 	td {
 	    float: left;
 	}
@@ -108,9 +111,8 @@
     }
     
     .sig_block {
-	border-left: 4px solid #e69c7f;
+	@include declaration;
 	padding-left: 1em;
-	background: linear-gradient(to left, white 0%, rgb(237, 232, 229) 100%);
 	// PROBLEM the sig_block ends too soon, it should actually
 	// include the "end)" line ==> REPORT THIS
 	// (eg: compilerlibref/Arg_helper.html)
@@ -185,20 +187,15 @@
     /* Links and anchors */
     a {
 	text-decoration: none;
-	color: #92370A;
-	/* box-shadow: 0 1px 0 0 #d8b68b; */
+	color: $primary_color;
+	font-weight:700;
     }
     a:hover {
-	box-shadow: 0 1px 0 0 #92370A;
-    }
-    td a:hover {
-	background: white;
+		text-decoration: underline;
     }
     /* Linked highlight */
     *:target {
-	/*box-shadow: 0 0px 0 1px rgba(255, 215, 181, 0.8) !important;*/
 	border-radius: 1px;
-	/*border-bottom: 4px solid rgb(255, 215, 181);*/
 	box-shadow: 0 4px 0 0px rgb(255, 215, 181);
 	z-index: 0;
 	@if $ocamlorg {
@@ -206,12 +203,6 @@
 	    padding-top: 85px;
 	    margin-top: -85px;
 	}
-    }
-
-    
-    h2:target {
-	/* background: linear-gradient(to bottom, rgb(253, 252, 252) 0%, rgba(255, 215, 181, 0.3) 100%) !important; */
-	/*	transition: 300ms; this prevents margin-top:-80 to work... */
     }
 
     *:hover>a.section-anchor {
@@ -223,7 +214,6 @@
     }
 
     a.section-anchor:hover {
-	box-shadow: none;
 	text-decoration: none;
 	color: #555;
     }
@@ -270,9 +260,8 @@
     h1 {
 	margin-top: 1.214em;
 	margin-bottom: 19px;
-	font-weight: 500;
+	font-weight: 700;
 	font-size: 1.953em;
-	box-shadow: 0 1px 0 0 #ddd;
     }
 
     h2 {
@@ -288,16 +277,7 @@
 	font-size: 0.8em;
     }
 
-    h1 code, h1 tt {
-	font-size: inherit;
-	font-weight: inherit;
-    }
-
-    h2 code, h2 tt {
-	font-size: inherit;
-	font-weight: inherit;
-    }
-
+    h1 code, h1 tt {tyle adjustments (CSS changes) on v2.ocaml.org, should I hand those off to someone? (edited) 
     h3 code, h3 tt {
 	font-size: inherit;
 	font-weight: inherit;
@@ -321,15 +301,15 @@
     }
 
     pre {
-	border-left: 4px solid #e69c7f;
+	@include declaration;
 	white-space: pre-wrap;
 	word-wrap: break-word;
 	padding-left: 1ex;
     }
 
     p code, li code { /* useful ? */
-	background-color: #ebf2f9;  /*#f6f8fa;*/
-	color: #0d2b3e;
+	border-radius: 0.25rem;
+	background-color: $light_background_color;
 	border-radius: 3px;
 	padding: 0 0.3ex;
 	white-space: pre-wrap; // utile seulement dans la table index_values? (attention à bootstrap.css)
@@ -337,10 +317,6 @@
 
     pre code {
 	background-color: inherit;
-    }
-
-    p a > code {
-	color: #92370A;
     }
 
     /* Code blocks (e.g. Examples) */
@@ -359,15 +335,11 @@
     /* Module member specification */
 
     .spec:not(.include), .spec.include details summary {
-	background: linear-gradient(to left, rgb(253, 252, 252) 0%, rgb(234, 246, 250) 100%);
+	background: $light_background_color;
 	border-radius: 3px;
 	border-left: 4px solid #5c9cf5;
 	border-right: 5px solid transparent;
 	padding: 0.35em 0.5em;
-    }
-
-    .spec.include details summary:hover {
-	background-color: #ebeff2;
     }
 
     dl, div.spec, .doc, aside {
@@ -649,7 +621,7 @@
 
     ul.itemize li::before {
 	content: "▶";
-	color: $logocolor;
+	color: $primary_color;
 	margin-right: 4px;
 	margin-left: -1em;
     }
@@ -699,7 +671,7 @@
     }
 
     .ocaml {
-	background: linear-gradient(to left, white 0%, rgb(243, 247, 246) 100%);
+	background: $light_background_color;
     }
 
     span.arrow {
@@ -711,20 +683,15 @@
 	display: inline-block;
     } 
     pre {
-	background: linear-gradient(to left, white 0%, rgb(237, 232, 229) 100%);
+		background: $light_background_color;
     }
 
     #search_results li.match::before {
 	content: "▶";
 	font-size: smaller;
-	color: $logocolor;
+	color: $primary_color;
 	float: left;
 	margin-left: -3ex;
-    }
-
-    code.caml-example,
-    div.caml-example, div.toplevel  {
-	/*    background: linear-gradient(to left, white 0%, rgb(243, 247, 246) 100%); */
     }
 
     div.caml-output.ok,
@@ -738,7 +705,7 @@
 	color: orangered;
     }
     .tutorial span {
-	color: $logocolor;
+	color: $primary_color;
     }
     
     ul.tutos_menu {
@@ -751,13 +718,9 @@
 	color: black;
     }
     
-    nav.toc {
-
-    }
-
     span.c003 {
 	font-family: $font-mono;
-	background-color: #f3ece6;
+	background-color: $nav_background;
 	border-radius: 6px;
     }
 
@@ -793,7 +756,8 @@
 
     code span.constructor,
     .caml-input span.kw2 {
-	color: #8d543c;
+	/*color: black;*/
+	font-weight:bold;
     }
 
     .caml-input span.numeric {
@@ -806,7 +770,7 @@
 
     code span.string,
     .caml-input span.string {
-	color: #df5000;
+	color: #92370a;
     }
 
     .caml-input span.comment {
@@ -835,12 +799,15 @@
     }
 
     code.type {
-	color: #8d543c;
+	color: #1b3660;
     }
+
+	tr {
+		border-bottom: 1px solid $light_background_color;
+	}
 
     td div.info p {
 	margin: 0;
-	box-shadow: 0 1px 0 0 #ddd;
     }
     td div.info { /* index page */
 	padding-left: 0;
@@ -851,9 +818,20 @@
     }
     
     input#api_search {
-	font-family: inherit;
+		outline:0;
+		-webkit-appearance: none;
+		font-family: inherit;
+		padding: 0.3rem 0.5rem;
+		border: 1px solid #bbb;
+		border-radius: 0.25rem;
+		margin: 1px;
     }
-    
+
+	input#api_search:focus {
+		margin: 0;
+		border: 2px solid $primary_color_subtle;
+	}
+
     #search_results {
 	ul {
 	    list-style: none;
@@ -886,7 +864,7 @@
     .search_comment #search_help {
 	overflow: hidden;
 	font-size: smaller;
-	background: linear-gradient(to bottom, white 0%, rgb(237, 232, 229) 100%);
+	background: $light_background_color;
 	transition: all 0.5s;
     }
     #help_icon {
