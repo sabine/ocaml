@@ -16,7 +16,8 @@ let compiler_libref = ref false
 type config = {
   src_dir : string;
   dst_dir : string;
-  title : string
+  title : string;
+  latest : bool; TODO: use latest to determine how to render the version switcher!
 }
 
 (* HTML code for the search widget. We don't add the "onchange" event because it
@@ -117,8 +118,8 @@ let make_toc ~version ~search file config title body =
           ~attributes:["href", "index.html"]
         |> prepend_child nav in
 
-  (* Add version number *)
-  add_version_link nav (config.title ^ "API Version " ^ version) releases_url;
+  (* Add version switch *)
+  add_version_switch nav ~kind:`Api ~version ~title:config.title;
 
   (* Add sidebar button for mobile navigation *)
   add_sidebar_button body;
@@ -135,7 +136,9 @@ let process ?(search=true) ~version config file out =
   let soup = parse_file ~original:true file in
 
   (* Add javascript and favicon *)
-  update_head ~search soup;
+  print_endline file;
+  print_endline out;
+  update_head ~search ~kind:`Api ~path:out soup;
 
   (* Add api wrapper *)
   let body = wrap_body ~classes:["api"] soup in
@@ -356,11 +359,17 @@ let copy_files config =
 let () =
   let version = find_version () in
   let args = Sys.argv |> Array.to_list |> List.tl in
-  let config = if List.mem "compiler" args
-    then { src_dir = html_maindir // "compilerlibref";
-           dst_dir = api_dir // "compilerlibref"; title = "Compiler "}
-    else { src_dir = html_maindir // "libref";
-           dst_dir = api_dir; title = ""} in
+  let (src_dir, dst_dir, title) =
+    if List.mem "compiler" args then
+      (html_maindir // "compilerlibref",
+       api_dir // "compilerlibref",
+       "Compiler ")
+     else
+      (html_maindir // "libref",
+       api_dir,
+       "")
+  in
+  let config = { src_dir; dst_dir; title; latest = List.mem "latest" args } in
   let overwrite = List.mem "overwrite" args in
   let makeindex = List.mem "makeindex" args in
   let makehtml = List.mem "html" args || not makeindex in

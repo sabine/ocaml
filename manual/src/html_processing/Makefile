@@ -8,9 +8,11 @@ else
     DBG=quiet
 endif
 
+#VERSION = "5.1"
+
 WEBDIR = ../webman
-WEBDIRMAN = $(WEBDIR)/manual
-WEBDIRAPI = $(WEBDIR)/api
+WEBDIRMAN = $(WEBDIR)/manual/$(VERSION)
+WEBDIRAPI = $(WEBDIR)/api/$(VERSION)
 WEBDIRCOMP = $(WEBDIRAPI)/compilerlibref
 
 # The "all" target generates the Web Manual in the directories

@@ -374,9 +374,7 @@ let make_toc_sidebar ~version ~title file body =
   end;
 
   (* Add version number *)
-  let version_text = if file = "index.html" then "Select another version"
-    else "Version " ^ version in
-  add_version_link nav version_text releases_url;
+  add_version_switch nav ~kind:`Manual ~version ~title:"";
   toc
 
  (* Create menu for all chapters in the part *)
@@ -447,7 +445,7 @@ let convert version (part_title, chapters) toc_table (file, title) =
 
   (* Change title, add javascript and favicon *)
   change_title title soup;
-  update_head soup;
+  update_head ~kind:`Manual ~path:file soup;
 
   (* Wrap body. *)
   let c = if file = "index.html" then ["manual"; "content"; "index"]
